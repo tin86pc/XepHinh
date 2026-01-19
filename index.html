@@ -329,9 +329,9 @@ const COLORS = [
   "#FF0000"   // Z - Red
 ];
 
-// Shape definitions với tất cả các rotation - ĐÃ SỬA
+// Shape definitions với tất cả các rotation
 const SHAPES = {
-  1: { // I - ĐÃ SỬA
+  1: { // I
     0: [[0,0,0,0], [1,1,1,1], [0,0,0,0], [0,0,0,0]],
     1: [[0,0,1,0], [0,0,1,0], [0,0,1,0], [0,0,1,0]],
     2: [[0,0,0,0], [0,0,0,0], [1,1,1,1], [0,0,0,0]],
@@ -344,30 +344,30 @@ const SHAPES = {
     3: [[1,1],[1,1]]
   },
   3: { // T
-    0: [[0,1,0],[1,1,1]],
+    0: [[0,1,0],[1,1,1],[0,0,0]],
     1: [[1,0],[1,1],[1,0]],
-    2: [[1,1,1],[0,1,0]],
+    2: [[1,1,1],[0,1,0],[0,0,0]],
     3: [[0,1],[1,1],[0,1]]
   },
   4: { // J
-    0: [[1,0,0],[1,1,1]],
+    0: [[1,0,0],[1,1,1],[0,0,0]],
     1: [[1,1],[1,0],[1,0]],
-    2: [[1,1,1],[0,0,1]],
+    2: [[1,1,1],[0,0,1],[0,0,0]],
     3: [[0,1],[0,1],[1,1]]
   },
   5: { // L
-    0: [[0,0,1],[1,1,1]],
+    0: [[0,0,1],[1,1,1],[0,0,0]],
     1: [[1,0],[1,0],[1,1]],
-    2: [[1,1,1],[1,0,0]],
+    2: [[1,1,1],[1,0,0],[0,0,0]],
     3: [[1,1],[0,1],[0,1]]
   },
-  6: { // S - ĐÃ SỬA
+  6: { // S
     0: [[0,1,1],[1,1,0],[0,0,0]],
     1: [[0,1,0],[0,1,1],[0,0,1]],
     2: [[0,0,0],[0,1,1],[1,1,0]],
     3: [[1,0,0],[1,1,0],[0,1,0]]
   },
-  7: { // Z - ĐÃ SỬA
+  7: { // Z
     0: [[1,1,0],[0,1,1],[0,0,0]],
     1: [[0,0,1],[0,1,1],[0,1,0]],
     2: [[0,0,0],[1,1,0],[0,1,1]],
@@ -375,9 +375,9 @@ const SHAPES = {
   }
 };
 
-// Wall kicks cho Tetris theo chuẩn SRS - ĐÃ SỬA
+// Wall kicks cho Tetris theo chuẩn SRS
 const WALL_KICKS = {
-  1: { // I piece - ĐÃ SỬA
+  1: { // I piece
     "0->1": [[0,0], [-2,0], [1,0], [-2,-1], [1,2]],
     "1->0": [[0,0], [2,0], [-1,0], [2,1], [-1,-2]],
     "1->2": [[0,0], [-1,0], [2,0], [-1,2], [2,-1]],
@@ -387,7 +387,7 @@ const WALL_KICKS = {
     "3->0": [[0,0], [1,0], [-2,0], [1,-2], [-2,1]],
     "0->3": [[0,0], [-1,0], [2,0], [-1,2], [2,-1]]
   },
-  default: { // Other pieces - ĐÃ SỬA
+  default: { // Other pieces
     "0->1": [[0,0], [-1,0], [-1,1], [0,-2], [-1,-2]],
     "1->0": [[0,0], [1,0], [1,-1], [0,2], [1,2]],
     "1->2": [[0,0], [1,0], [1,-1], [0,2], [1,2]],
@@ -398,6 +398,16 @@ const WALL_KICKS = {
     "0->3": [[0,0], [1,0], [1,1], [0,-2], [1,-2]]
   }
 };
+
+// Thêm extra kicks cho các khối khi sát tường - ĐÃ THÊM
+const EXTRA_KICKS = [
+  [0, 0],   // Gốc
+  [1, 0], [-1, 0], [0, 1], [0, -1],  // Xung quanh gần
+  [2, 0], [-2, 0], [0, 2], [0, -2],  // Xa hơn
+  [1, 1], [-1, 1], [1, -1], [-1, -1], // Chéo
+  [2, 1], [-2, 1], [2, -1], [-2, -1], // Chéo xa hơn
+  [1, 2], [-1, 2], [1, -2], [-1, -2]  // Chéo dọc xa
+];
 
 let board = [];
 let currentPiece;
@@ -482,7 +492,7 @@ function merge() {
   });
 }
 
-// ========== XOAY MỚI - ĐÃ SỬA LỖI KHỐI S VÀ I ==========
+// ========== XOAY MỚI - ĐÃ SỬA CHO TẤT CẢ KHỐI ==========
 function rotatePiece() {
   // Khối O không xoay
   if (currentPiece.type === 2) {
@@ -504,7 +514,7 @@ function rotatePiece() {
   const kickKey = `${originalRotation}->${newRotation}`;
   const kicks = kickSet[kickKey] || [[0,0]];
   
-  // Thử tất cả các kick
+  // Thử tất cả các wall kick theo chuẩn
   for (const [kx, ky] of kicks) {
     const testX = originalX + kx;
     const testY = originalY + ky;
@@ -516,16 +526,51 @@ function rotatePiece() {
       currentPiece.rotation = newRotation;
       currentPiece.x = testX;
       currentPiece.y = testY;
-      
-      // Đảm bảo không ra ngoài biên trái/phải
-      if (currentPiece.x < 0) {
-        currentPiece.x = 0;
-      }
-      if (currentPiece.x + currentPiece.shape[0].length > COLS) {
-        currentPiece.x = COLS - currentPiece.shape[0].length;
-      }
-      
       return true;
+    }
+  }
+  
+  // Nếu không có wall kick nào hoạt động, thử các extra kicks
+  // Áp dụng cho tất cả các khối (3: T, 4: J, 5: L, 6: S, 7: Z)
+  if (currentPiece.type >= 3 && currentPiece.type <= 7) {
+    // Ưu tiên các kick ngang vì khối thường bị kẹt ở tường
+    const priorityKicks = [
+      [0, 0],    // Gốc
+      [1, 0], [-1, 0], // Trái phải
+      [2, 0], [-2, 0], // Xa hơn
+      [0, -1], [0, -2], // Lên
+      [1, -1], [-1, -1], // Chéo lên
+      [1, 1], [-1, 1]  // Chéo xuống
+    ];
+    
+    // Thử các kick có độ ưu tiên
+    for (const [kx, ky] of priorityKicks) {
+      const testX = originalX + kx;
+      const testY = originalY + ky;
+      
+      if (!collide(testX, testY, newShape)) {
+        // Cập nhật piece mới
+        currentPiece.shape = newShape;
+        currentPiece.rotation = newRotation;
+        currentPiece.x = testX;
+        currentPiece.y = testY;
+        return true;
+      }
+    }
+    
+    // Nếu vẫn không được, thử tất cả các extra kicks
+    for (const [kx, ky] of EXTRA_KICKS) {
+      const testX = originalX + kx;
+      const testY = originalY + ky;
+      
+      if (!collide(testX, testY, newShape)) {
+        // Cập nhật piece mới
+        currentPiece.shape = newShape;
+        currentPiece.rotation = newRotation;
+        currentPiece.x = testX;
+        currentPiece.y = testY;
+        return true;
+      }
     }
   }
   
@@ -1004,9 +1049,9 @@ canvas.addEventListener('contextmenu', e => e.preventDefault());
 
 // Hiển thị thông báo khi tải trang
 console.log("Tetris Mobile - Xoay mượt đã fix");
-console.log("Đã sửa: Xoay mượt cho khối S và I sát tường");
-console.log("Đã sửa: Wall kicks theo chuẩn SRS");
-console.log("Đã sửa: Định dạng shape chính xác");
+console.log("Đã sửa: Xoay mượt cho tất cả khối sát tường");
+console.log("Đã thêm: Extra kicks cho T, J, L, S, Z");
+console.log("Đã ưu tiên: Các kick ngang khi sát tường");
 </script>
 
 </body>
