@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Tetris Mobile</title>
+
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  touch-action: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0d001a;
+  font-family: 'Arial', sans-serif;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  color: white;
+}
+
+/* Header - Đã bỏ border-bottom */
+.game-header {
+  height: 60px;
+  min-height: 60px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(180deg, #0a001a 0%, #090014 100%);
+}
+
+.score-display {
+  display: flex;
+  gap: 25px;
+}
+
+.score-item {
+  font-size: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.score-label {
+  font-size: 14px;
+  color: #a78bfa;
+  opacity: 0.8;
+}
+
+.score-value {
+  font-size: 22px;
+  font-weight: bold;
+  color: #ffeb3b;
+  text-shadow: 0 0 10px rgba(255,235,59,0.5);
+}
+
+#level {
+  color: #4fc3f7;
+  text-shadow: 0 0 10px rgba(79,195,247,0.5);
+}
+
+/* Game area */
+.main-game-area {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  position: relative;
+  background: linear-gradient(180deg, #0d001a 0%, #090014 100%);
+}
+
+/* Canvas */
+#game {
+  background: #0a0014;
+  border: 3px solid #5a3eff;
+  border-radius: 12px;
+  box-shadow: 
+    0 0 30px rgba(90,60,255,0.6),
+    inset 0 0 20px rgba(0,0,0,0.5);
+}
+
+/* Pause Overlay */
+.pause-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(5px);
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  border-radius: 12px;
+}
+
+.pause-overlay.show {
+  display: flex;
+}
+
+.pause-title {
+  font-size: 32px;
+  color: #ff5722;
+  margin-bottom: 15px;
+  font-weight: bold;
+  text-shadow: 0 0 15px rgba(255,87,34,0.7);
+}
+
+.pause-text {
+  font-size: 18px;
+  color: #e0e0ff;
+  margin: 5px 0;
+  text-align: center;
+  padding: 0 20px;
+}
+
+/* Controls - Đã bỏ border-top */
+.controls-container {
+  height: 80px;
+  min-height: 80px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(180deg, #090014 0%, #0a001a 100%);
+}
+
+.control-row {
+  display: flex;
+  gap: 25px;
+}
+
+.icon-button {
+  width: 65px;
+  height: 65px;
+  border-radius: 50%;
+  border: none;
+  font-size: 28px;
+  background: linear-gradient(145deg, #673ab7, #5e35b1);
+  color: white;
+  box-shadow: 
+    0 4px 15px rgba(103,58,183,0.6),
+    0 -2px 5px rgba(255,255,255,0.1) inset;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.icon-button:active {
+  transform: scale(0.95);
+  box-shadow: 
+    0 2px 8px rgba(103,58,183,0.4),
+    0 -1px 3px rgba(255,255,255,0.1) inset;
+}
+
+.icon-button.pause {
+  background: linear-gradient(145deg, #ff5722, #e64a19);
+  box-shadow: 
+    0 4px 15px rgba(255,87,34,0.6),
+    0 -2px 5px rgba(255,255,255,0.1) inset;
+}
+
+.icon-button.fullscreen {
+  background: linear-gradient(145deg, #2196f3, #1976d2);
+  box-shadow: 
+    0 4px 15px rgba(33,150,243,0.6),
+    0 -2px 5px rgba(255,255,255,0.1) inset;
+}
+
+.icon-button::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* Mobile adjustments */
+@media (max-height: 700px) {
+  .game-header {
+    height: 50px;
+    min-height: 50px;
+  }
+  
+  .score-item {
+    font-size: 16px;
+  }
+  
+  .score-value {
+    font-size: 20px;
+  }
+  
+  .controls-container {
+    height: 70px;
+    min-height: 70px;
+  }
+  
+  .icon-button {
+    width: 60px;
+    height: 60px;
+    font-size: 26px;
+  }
+  
+  .pause-title {
+    font-size: 28px;
+  }
+  
+  .pause-text {
+    font-size: 16px;
+  }
+}
+
+@media (max-height: 600px) {
+  .game-header {
+    height: 45px;
+    min-height: 45px;
+  }
+  
+  .controls-container {
+    height: 65px;
+    min-height: 65px;
+  }
+  
+  .icon-button {
+    width: 55px;
+    height: 55px;
+    font-size: 24px;
+  }
+}
+
+/* Hide scrollbars */
+::-webkit-scrollbar {
+  display: none;
+}
+</style>
+</head>
+
+<body>
+
+<div class="game-header">
+  <div class="score-display">
+    <div class="score-item">
+      <div class="score-label">ĐIỂM</div>
+      <div class="score-value" id="score">0</div>
+    </div>
+    <div class="score-item">
+      <div class="score-label">LEVEL</div>
+      <div class="score-value" id="level">1</div>
+    </div>
+  </div>
+</div>
+
+<div class="main-game-area">
+  <canvas id="game"></canvas>
+  
+  <div class="pause-overlay" id="pauseOverlay">
+    <div class="pause-title">⏸️ TẠM DỪNG</div>
+    <div class="pause-text">Nhấn nút ▶️ để tiếp tục</div>
+    <div class="pause-text">Hoặc nhấn phím P</div>
+  </div>
+</div>
+
+<div class="controls-container">
+  <div class="control-row">
+    <button class="icon-button" onclick="resetGame()" title="Chơi lại">
+      🔄
+    </button>
+    <button class="icon-button pause" id="pauseBtn" onclick="togglePause()" title="Dừng/Tiếp tục">
+      ⏸️
+    </button>
+    <button class="icon-button fullscreen" onclick="toggleFullscreen()" title="Toàn màn hình">
+      ⛶
+    </button>
+  </div>
+</div>
+
+<script>
+// ===================== CONFIG =====================
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const COLS = 10;
+const ROWS = 20;
+const BLOCK = 30;
+
+const COLORS = [null, "#00FFFF","#FFFF00","#800080","#0000FF","#FFA500","#00FF00","#FF0000"];
+
+const SHAPES = [
+  null,
+  [[1,1,1,1]], [[1,1],[1,1]], [[0,1,0],[1,1,1]],
+  [[1,0,0],[1,1,1]], [[0,0,1],[1,1,1]], [[0,1,1],[1,1,0]], [[1,1,0],[0,1,1]]
+];
+
+let board = [];
+let currentPiece;
+let score = 0;
+let level = 1;
+let dropInterval = 800;
+let gameRunning = false;
+let dropTimer = null;
+let gamePaused = false;
+
+// Touch control variables
+let touchStartX = 0;
+let touchStartY = 0;
+let touchStartTime = 0;
+let isDragging = false;
+let dragStartPieceX = 0;
+
+// Sensitivity settings
+const SWIPE_THRESHOLD = 40;
+const TAP_THRESHOLD = 200;
+const TAP_MOVE_THRESHOLD = 15;
+const DRAG_THRESHOLD = 10;
+
+// ===================== GAME FUNCTIONS =====================
+function createBoard() {
+  board = Array.from({length: ROWS}, () => Array(COLS).fill(0));
+}
+
+function createPiece() {
+  const type = Math.floor(Math.random() * 7) + 1;
+  return {
+    type,
+    shape: SHAPES[type].map(row => [...row]),
+    x: Math.floor(COLS/2)-1,
+    y: 0
+  };
+}
+
+function collide(px, py, shape) {
+  for (let y = 0; y < shape.length; y++) {
+    for (let x = 0; x < shape[y].length; x++) {
+      if (shape[y][x]) {
+        const nx = px + x;
+        const ny = py + y;
+        if (nx < 0 || nx >= COLS || ny >= ROWS || (ny >= 0 && board[ny][nx])) return true;
+      }
+    }
+  }
+  return false;
+}
+
+function merge() {
+  currentPiece.shape.forEach((row, y) => {
+    row.forEach((v, x) => {
+      if (v) board[currentPiece.y + y][currentPiece.x + x] = currentPiece.type;
+    });
+  });
+}
+
+function rotatePiece() {
+  const rotated = currentPiece.shape[0].map((_, i) => 
+    currentPiece.shape.map(row => row[i]).reverse()
+  );
+  if (!collide(currentPiece.x, currentPiece.y, rotated)) {
+    currentPiece.shape = rotated;
+  }
+}
+
+function clearLines() {
+  let linesCleared = 0;
+  for (let y = ROWS - 1; y >= 0; y--) {
+    if (board[y].every(v => v)) {
+      board.splice(y, 1);
+      board.unshift(Array(COLS).fill(0));
+      linesCleared++;
+      y++; // Check same row again
+    }
+  }
+  
+  if (linesCleared > 0) {
+    // Score calculation: 40, 100, 300, 1200 points for 1-4 lines
+    const linePoints = [0, 40, 100, 300, 1200];
+    score += linePoints[linesCleared] * level;
+    
+    // Level up every 1000 points
+    const newLevel = Math.floor(score / 1000) + 1;
+    if (newLevel > level) {
+      level = newLevel;
+      // Speed increases with level
+      dropInterval = Math.max(100, 800 - (level - 1) * 50);
+      if (dropTimer) {
+        clearInterval(dropTimer);
+        dropTimer = setInterval(drop, dropInterval);
+      }
+    }
+    
+    document.getElementById("score").textContent = score;
+    document.getElementById("level").textContent = level;
+  }
+}
+
+function drawBlock(x, y, color) {
+  ctx.fillStyle = color;
+  ctx.fillRect(x * BLOCK, y * BLOCK, BLOCK - 1, BLOCK - 1);
+  
+  // Add highlight effect
+  ctx.fillStyle = "rgba(255,255,255,0.2)";
+  ctx.fillRect(x * BLOCK + 2, y * BLOCK + 2, BLOCK - 5, 3);
+  ctx.fillRect(x * BLOCK + 2, y * BLOCK + 2, 3, BLOCK - 5);
+  
+  // Add shadow
+  ctx.fillStyle = "rgba(0,0,0,0.3)";
+  ctx.fillRect(x * BLOCK + 2, y * BLOCK + BLOCK - 3, BLOCK - 5, 3);
+  ctx.fillRect(x * BLOCK + BLOCK - 3, y * BLOCK + 2, 3, BLOCK - 5);
+}
+
+function draw() {
+  // Clear canvas with gradient background
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  // Draw grid background
+  ctx.strokeStyle = "rgba(90, 62, 255, 0.1)";
+  ctx.lineWidth = 1;
+  
+  // Vertical lines
+  for (let x = 0; x <= COLS; x++) {
+    ctx.beginPath();
+    ctx.moveTo(x * BLOCK, 0);
+    ctx.lineTo(x * BLOCK, ROWS * BLOCK);
+    ctx.stroke();
+  }
+  
+  // Horizontal lines
+  for (let y = 0; y <= ROWS; y++) {
+    ctx.beginPath();
+    ctx.moveTo(0, y * BLOCK);
+    ctx.lineTo(COLS * BLOCK, y * BLOCK);
+    ctx.stroke();
+  }
+  
+  // Draw placed blocks
+  board.forEach((row, y) => {
+    row.forEach((v, x) => {
+      if (v) drawBlock(x, y, COLORS[v]);
+    });
+  });
+  
+  // Draw current piece
+  if (currentPiece) {
+    currentPiece.shape.forEach((row, y) => {
+      row.forEach((v, x) => {
+        if (v) drawBlock(currentPiece.x + x, currentPiece.y + y, COLORS[currentPiece.type]);
+      });
+    });
+  }
+}
+
+function drop() {
+  if (!gameRunning || !currentPiece || gamePaused) return;
+  
+  if (!collide(currentPiece.x, currentPiece.y + 1, currentPiece.shape)) {
+    currentPiece.y++;
+  } else {
+    merge();
+    clearLines();
+    currentPiece = createPiece();
+    
+    if (collide(currentPiece.x, currentPiece.y, currentPiece.shape)) {
+      gameRunning = false;
+      document.getElementById('pauseOverlay').innerHTML = `
+        <div class="pause-title">🎮 GAME OVER</div>
+        <div class="pause-text">Điểm: ${score}</div>
+        <div class="pause-text">Level: ${level}</div>
+        <div class="pause-text">Nhấn 🔄 để chơi lại</div>
+      `;
+      document.getElementById('pauseOverlay').classList.add('show');
+      document.getElementById('pauseBtn').innerHTML = '⏸️';
+    }
+  }
+  draw();
+}
+
+function startGame() {
+  createBoard();
+  currentPiece = createPiece();
+  score = 0;
+  level = 1;
+  dropInterval = 800;
+  
+  document.getElementById("score").textContent = "0";
+  document.getElementById("level").textContent = "1";
+  document.getElementById('pauseOverlay').classList.remove('show');
+  
+  gameRunning = true;
+  gamePaused = false;
+  document.getElementById('pauseBtn').innerHTML = '⏸️';
+  
+  draw();
+  drop();
+  draw();
+  
+  if (dropTimer) clearInterval(dropTimer);
+  dropTimer = setInterval(drop, dropInterval);
+}
+
+function resetGame() {
+  if (dropTimer) clearInterval(dropTimer);
+  gameRunning = false;
+  setTimeout(startGame, 100);
+}
+
+function togglePause() {
+  if (!gameRunning) return;
+  
+  gamePaused = !gamePaused;
+  if (gamePaused) {
+    document.getElementById('pauseOverlay').classList.add('show');
+    document.getElementById('pauseBtn').innerHTML = '▶️';
+  } else {
+    document.getElementById('pauseOverlay').classList.remove('show');
+    document.getElementById('pauseBtn').innerHTML = '⏸️';
+    draw();
+  }
+}
+
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(err => {
+      console.log(`Lỗi khi vào chế độ toàn màn hình: ${err.message}`);
+    });
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    }
+  }
+}
+
+// ===================== RESIZE CANVAS =====================
+function resizeCanvas() {
+  const header = document.querySelector('.game-header');
+  const controls = document.querySelector('.controls-container');
+  
+  const headerHeight = header.offsetHeight;
+  const controlsHeight = controls.offsetHeight;
+  
+  const availableWidth = window.innerWidth;
+  const availableHeight = window.innerHeight - headerHeight - controlsHeight;
+  
+  const gameRatio = COLS / ROWS; // 0.5
+  
+  let canvasWidth, canvasHeight;
+  
+  if (availableWidth / availableHeight > gameRatio) {
+    // Fit by height
+    canvasHeight = availableHeight;
+    canvasWidth = Math.floor(canvasHeight * gameRatio);
+  } else {
+    // Fit by width
+    canvasWidth = availableWidth;
+    canvasHeight = Math.floor(canvasWidth / gameRatio);
+  }
+  
+  // Set canvas display size
+  canvas.style.width = canvasWidth + 'px';
+  canvas.style.height = canvasHeight + 'px';
+  
+  // Set canvas drawing buffer size
+  canvas.width = COLS * BLOCK;
+  canvas.height = ROWS * BLOCK;
+  
+  // Redraw game
+  if (gameRunning) draw();
+}
+
+// ===================== EVENT LISTENERS =====================
+// Window resize
+window.addEventListener("resize", resizeCanvas);
+window.addEventListener("orientationchange", () => {
+  setTimeout(resizeCanvas, 100);
+});
+
+// Fullscreen change
+document.addEventListener('fullscreenchange', () => {
+  setTimeout(resizeCanvas, 100);
+});
+
+// Start game and resize
+startGame();
+setTimeout(resizeCanvas, 100);
+
+// ===================== KEYBOARD CONTROLS =====================
+document.addEventListener("keydown", e => {
+  if (!gameRunning || gamePaused) return;
+  
+  e.preventDefault();
+  
+  switch(e.key) {
+    case "ArrowLeft":
+      if (!collide(currentPiece.x - 1, currentPiece.y, currentPiece.shape)) {
+        currentPiece.x--;
+        draw();
+      }
+      break;
+      
+    case "ArrowRight":
+      if (!collide(currentPiece.x + 1, currentPiece.y, currentPiece.shape)) {
+        currentPiece.x++;
+        draw();
+      }
+      break;
+      
+    case "ArrowDown":
+      if (!collide(currentPiece.x, currentPiece.y + 1, currentPiece.shape)) {
+        currentPiece.y++;
+        draw();
+      }
+      break;
+      
+    case "ArrowUp":
+      rotatePiece();
+      draw();
+      break;
+      
+    case " ":
+      // Space bar - hard drop
+      while (!collide(currentPiece.x, currentPiece.y + 1, currentPiece.shape)) {
+        currentPiece.y++;
+      }
+      drop();
+      break;
+      
+    case "p":
+    case "P":
+      togglePause();
+      break;
+      
+    case "f":
+    case "F":
+      toggleFullscreen();
+      break;
+      
+    case "r":
+    case "R":
+      resetGame();
+      break;
+  }
+});
+
+// ===================== TOUCH CONTROLS =====================
+canvas.addEventListener("touchstart", e => {
+  if (gamePaused) return;
+  e.preventDefault();
+  
+  const touch = e.touches[0];
+  touchStartX = touch.clientX;
+  touchStartY = touch.clientY;
+  touchStartTime = Date.now();
+  isDragging = false;
+  dragStartPieceX = currentPiece.x;
+});
+
+canvas.addEventListener("touchmove", e => {
+  if (!gameRunning || gamePaused) return;
+  e.preventDefault();
+  
+  const touch = e.touches[0];
+  const deltaX = Math.abs(touch.clientX - touchStartX);
+  const deltaY = Math.abs(touch.clientY - touchStartY);
+  
+  // Start dragging if horizontal movement is significant
+  if (!isDragging && deltaX > DRAG_THRESHOLD && deltaX > deltaY) {
+    isDragging = true;
+  }
+  
+  if (isDragging) {
+    const pixelDiff = touch.clientX - touchStartX;
+    const blockSize = canvas.width / COLS;
+    const blockDiff = Math.round(pixelDiff / (blockSize * 0.8));
+    const targetX = dragStartPieceX + blockDiff;
+    
+    // Move piece smoothly to target position
+    if (targetX > currentPiece.x) {
+      for (let i = currentPiece.x + 1; i <= targetX; i++) {
+        if (!collide(i, currentPiece.y, currentPiece.shape)) {
+          currentPiece.x = i;
+        } else {
+          break;
+        }
+      }
+    } else if (targetX < currentPiece.x) {
+      for (let i = currentPiece.x - 1; i >= targetX; i--) {
+        if (!collide(i, currentPiece.y, currentPiece.shape)) {
+          currentPiece.x = i;
+        } else {
+          break;
+        }
+      }
+    }
+    
+    draw();
+  }
+});
+
+canvas.addEventListener("touchend", e => {
+  if (gamePaused) return;
+  e.preventDefault();
+  
+  if (!gameRunning) {
+    resetGame();
+    return;
+  }
+  
+  const touch = e.changedTouches[0];
+  const deltaX = touch.clientX - touchStartX;
+  const deltaY = touch.clientY - touchStartY;
+  const deltaTime = Date.now() - touchStartTime;
+  
+  const absDeltaX = Math.abs(deltaX);
+  const absDeltaY = Math.abs(deltaY);
+  
+  // If dragging was happening, just end it
+  if (isDragging) {
+    isDragging = false;
+    return;
+  }
+  
+  // Handle tap and swipe gestures
+  if (deltaTime < TAP_THRESHOLD && absDeltaX < TAP_MOVE_THRESHOLD && absDeltaY < TAP_MOVE_THRESHOLD) {
+    // Tap - rotate piece
+    rotatePiece();
+    draw();
+  } else if (absDeltaY > SWIPE_THRESHOLD) {
+    // Swipe vertical
+    if (deltaY > 0) {
+      // Swipe down - hard drop
+      while (!collide(currentPiece.x, currentPiece.y + 1, currentPiece.shape)) {
+        currentPiece.y++;
+      }
+      drop();
+    } else {
+      // Swipe up - rotate
+      rotatePiece();
+      draw();
+    }
+  }
+});
+
+// ===================== MOUSE CONTROLS =====================
+let mouseIsDown = false;
+let mouseStartX = 0;
+let mouseStartPieceX = 0;
+
+canvas.addEventListener('mousedown', e => {
+  if (!gameRunning || gamePaused) return;
+  mouseIsDown = true;
+  mouseStartX = e.clientX;
+  mouseStartPieceX = currentPiece.x;
+  e.preventDefault();
+});
+
+canvas.addEventListener('mousemove', e => {
+  if (!gameRunning || !mouseIsDown || gamePaused) return;
+  
+  const pixelDiff = e.clientX - mouseStartX;
+  const blockSize = canvas.width / COLS;
+  const blockDiff = Math.round(pixelDiff / (blockSize * 0.8));
+  const targetX = mouseStartPieceX + blockDiff;
+  
+  if (targetX > currentPiece.x) {
+    for (let i = currentPiece.x + 1; i <= targetX; i++) {
+      if (!collide(i, currentPiece.y, currentPiece.shape)) {
+        currentPiece.x = i;
+      } else {
+        break;
+      }
+    }
+  } else if (targetX < currentPiece.x) {
+    for (let i = currentPiece.x - 1; i >= targetX; i--) {
+      if (!collide(i, currentPiece.y, currentPiece.shape)) {
+        currentPiece.x = i;
+      } else {
+        break;
+      }
+    }
+  }
+  
+  draw();
+  e.preventDefault();
+});
+
+canvas.addEventListener('mouseup', e => {
+  mouseIsDown = false;
+  e.preventDefault();
+});
+
+canvas.addEventListener('mouseleave', e => {
+  mouseIsDown = false;
+});
+
+canvas.addEventListener('click', (e) => {
+  if (gameRunning && !gamePaused && !mouseIsDown) {
+    rotatePiece();
+    draw();
+  }
+});
+
+// ===================== PREVENT UNWANTED BEHAVIOR =====================
+document.addEventListener('touchmove', function(e) {
+  if (e.target === canvas || e.target.closest('.main-game-area')) {
+    e.preventDefault();
+  }
+}, { passive: false });
+
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+</script>
+
+</body>
+</html>
