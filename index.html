@@ -329,11 +329,13 @@ const COLORS = [
   "#FF0000"   // Z - Red
 ];
 
-// Shape definitions với tất cả các rotation
+// Shape definitions với tất cả các rotation - ĐÃ SỬA
 const SHAPES = {
-  1: { // I
-    0: [[1,1,1,1]],
-    1: [[1],[1],[1],[1]]
+  1: { // I - ĐÃ SỬA
+    0: [[0,0,0,0], [1,1,1,1], [0,0,0,0], [0,0,0,0]],
+    1: [[0,0,1,0], [0,0,1,0], [0,0,1,0], [0,0,1,0]],
+    2: [[0,0,0,0], [0,0,0,0], [1,1,1,1], [0,0,0,0]],
+    3: [[0,1,0,0], [0,1,0,0], [0,1,0,0], [0,1,0,0]]
   },
   2: { // O
     0: [[1,1],[1,1]],
@@ -359,41 +361,41 @@ const SHAPES = {
     2: [[1,1,1],[1,0,0]],
     3: [[1,1],[0,1],[0,1]]
   },
-  6: { // S
-    0: [[0,1,1],[1,1,0]],
-    1: [[1,0],[1,1],[0,1]],
-    2: [[0,1,1],[1,1,0]],
-    3: [[1,0],[1,1],[0,1]]
+  6: { // S - ĐÃ SỬA
+    0: [[0,1,1],[1,1,0],[0,0,0]],
+    1: [[0,1,0],[0,1,1],[0,0,1]],
+    2: [[0,0,0],[0,1,1],[1,1,0]],
+    3: [[1,0,0],[1,1,0],[0,1,0]]
   },
-  7: { // Z
-    0: [[1,1,0],[0,1,1]],
-    1: [[0,1],[1,1],[1,0]],
-    2: [[1,1,0],[0,1,1]],
-    3: [[0,1],[1,1],[1,0]]
+  7: { // Z - ĐÃ SỬA
+    0: [[1,1,0],[0,1,1],[0,0,0]],
+    1: [[0,0,1],[0,1,1],[0,1,0]],
+    2: [[0,0,0],[1,1,0],[0,1,1]],
+    3: [[0,1,0],[1,1,0],[1,0,0]]
   }
 };
 
-// Wall kicks cho Tetris theo chuẩn SRS
+// Wall kicks cho Tetris theo chuẩn SRS - ĐÃ SỬA
 const WALL_KICKS = {
-  1: { // I piece special kicks
-    "0->1": [[0,0],[-2,0],[1,0],[-2,-1],[1,2]],
-    "1->0": [[0,0],[2,0],[-1,0],[2,1],[-1,-2]],
-    "1->2": [[0,0],[-1,0],[2,0],[-1,2],[2,-1]],
-    "2->1": [[0,0],[1,0],[-2,0],[1,-2],[-2,1]],
-    "2->3": [[0,0],[2,0],[-1,0],[2,1],[-1,-2]],
-    "3->2": [[0,0],[-2,0],[1,0],[-2,-1],[1,2]],
-    "3->0": [[0,0],[1,0],[-2,0],[1,-2],[-2,1]],
-    "0->3": [[0,0],[-1,0],[2,0],[-1,2],[2,-1]]
+  1: { // I piece - ĐÃ SỬA
+    "0->1": [[0,0], [-2,0], [1,0], [-2,-1], [1,2]],
+    "1->0": [[0,0], [2,0], [-1,0], [2,1], [-1,-2]],
+    "1->2": [[0,0], [-1,0], [2,0], [-1,2], [2,-1]],
+    "2->1": [[0,0], [1,0], [-2,0], [1,-2], [-2,1]],
+    "2->3": [[0,0], [2,0], [-1,0], [2,1], [-1,-2]],
+    "3->2": [[0,0], [-2,0], [1,0], [-2,-1], [1,2]],
+    "3->0": [[0,0], [1,0], [-2,0], [1,-2], [-2,1]],
+    "0->3": [[0,0], [-1,0], [2,0], [-1,2], [2,-1]]
   },
-  default: { // Other pieces
-    "0->1": [[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]],
-    "1->0": [[0,0],[1,0],[1,-1],[0,2],[1,2]],
-    "1->2": [[0,0],[1,0],[1,-1],[0,2],[1,2]],
-    "2->1": [[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]],
-    "2->3": [[0,0],[1,0],[1,1],[0,-2],[1,-2]],
-    "3->2": [[0,0],[-1,0],[-1,-1],[0,2],[-1,2]],
-    "3->0": [[0,0],[-1,0],[-1,-1],[0,2],[-1,2]],
-    "0->3": [[0,0],[1,0],[1,1],[0,-2],[1,-2]]
+  default: { // Other pieces - ĐÃ SỬA
+    "0->1": [[0,0], [-1,0], [-1,1], [0,-2], [-1,-2]],
+    "1->0": [[0,0], [1,0], [1,-1], [0,2], [1,2]],
+    "1->2": [[0,0], [1,0], [1,-1], [0,2], [1,2]],
+    "2->1": [[0,0], [-1,0], [-1,1], [0,-2], [-1,-2]],
+    "2->3": [[0,0], [1,0], [1,1], [0,-2], [1,-2]],
+    "3->2": [[0,0], [-1,0], [-1,-1], [0,2], [-1,2]],
+    "3->0": [[0,0], [-1,0], [-1,-1], [0,2], [-1,2]],
+    "0->3": [[0,0], [1,0], [1,1], [0,-2], [1,-2]]
   }
 };
 
@@ -428,12 +430,19 @@ function createPiece() {
   const type = Math.floor(Math.random() * 7) + 1;
   const shape = SHAPES[type][0].map(row => [...row]);
   
+  // Điều chỉnh vị trí ban đầu cho khối I
+  let startX = Math.floor(COLS/2) - Math.floor(shape[0].length/2);
+  if (type === 1) {
+    // Khối I cần offset khác vì nó dài 4 block
+    startX = Math.max(0, Math.min(COLS - shape[0].length, startX));
+  }
+  
   return {
     type,
     shape: shape,
     rotation: 0,
-    x: Math.floor(COLS/2) - Math.floor(shape[0].length/2),
-    y: 0
+    x: startX,
+    y: type === 1 ? -1 : 0  // Khối I cần bắt đầu cao hơn
   };
 }
 
@@ -443,7 +452,16 @@ function collide(px, py, shape) {
       if (shape[y][x]) {
         const nx = px + x;
         const ny = py + y;
-        if (nx < 0 || nx >= COLS || ny >= ROWS || (ny >= 0 && board[ny][nx])) return true;
+        
+        // Kiểm tra va chạm với tường và đáy
+        if (nx < 0 || nx >= COLS || ny >= ROWS) {
+          return true;
+        }
+        
+        // Kiểm tra va chạm với các block đã đặt (chỉ khi ny >= 0)
+        if (ny >= 0 && board[ny][nx]) {
+          return true;
+        }
       }
     }
   }
@@ -453,12 +471,18 @@ function collide(px, py, shape) {
 function merge() {
   currentPiece.shape.forEach((row, y) => {
     row.forEach((v, x) => {
-      if (v) board[currentPiece.y + y][currentPiece.x + x] = currentPiece.type;
+      if (v) {
+        const boardY = currentPiece.y + y;
+        const boardX = currentPiece.x + x;
+        if (boardY >= 0 && boardY < ROWS && boardX >= 0 && boardX < COLS) {
+          board[boardY][boardX] = currentPiece.type;
+        }
+      }
     });
   });
 }
 
-// ========== XOAY MỚI - ĐƠN GIẢN VÀ CHÍNH XÁC ==========
+// ========== XOAY MỚI - ĐÃ SỬA LỖI KHỐI S VÀ I ==========
 function rotatePiece() {
   // Khối O không xoay
   if (currentPiece.type === 2) {
@@ -482,8 +506,8 @@ function rotatePiece() {
   
   // Thử tất cả các kick
   for (const [kx, ky] of kicks) {
-    const testX = currentPiece.x + kx;
-    const testY = currentPiece.y + ky;
+    const testX = originalX + kx;
+    const testY = originalY + ky;
     
     // Kiểm tra xem có thể xoay ở vị trí này không
     if (!collide(testX, testY, newShape)) {
@@ -493,12 +517,14 @@ function rotatePiece() {
       currentPiece.x = testX;
       currentPiece.y = testY;
       
-      // Đảm bảo không đi lên quá đỉnh
-      if (currentPiece.y < 0) {
-        currentPiece.y = 0;
+      // Đảm bảo không ra ngoài biên trái/phải
+      if (currentPiece.x < 0) {
+        currentPiece.x = 0;
+      }
+      if (currentPiece.x + currentPiece.shape[0].length > COLS) {
+        currentPiece.x = COLS - currentPiece.shape[0].length;
       }
       
-      draw();
       return true;
     }
   }
@@ -509,7 +535,6 @@ function rotatePiece() {
   currentPiece.y = originalY;
   currentPiece.rotation = originalRotation;
   
-  draw();
   return false;
 }
 
@@ -586,19 +611,27 @@ function draw() {
   }
   
   // Draw placed blocks
-  board.forEach((row, y) => {
-    row.forEach((v, x) => {
-      if (v) drawBlock(x, y, COLORS[v]);
-    });
-  });
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      if (board[y][x]) {
+        drawBlock(x, y, COLORS[board[y][x]]);
+      }
+    }
+  }
   
   // Draw current piece
   if (currentPiece) {
-    currentPiece.shape.forEach((row, y) => {
-      row.forEach((v, x) => {
-        if (v) drawBlock(currentPiece.x + x, currentPiece.y + y, COLORS[currentPiece.type]);
-      });
-    });
+    for (let y = 0; y < currentPiece.shape.length; y++) {
+      for (let x = 0; x < currentPiece.shape[y].length; x++) {
+        if (currentPiece.shape[y][x]) {
+          const drawX = currentPiece.x + x;
+          const drawY = currentPiece.y + y;
+          if (drawY >= -1) { // Chỉ vẽ nếu block nằm trong khu vực nhìn thấy (cho phép -1 cho khối I)
+            drawBlock(drawX, drawY, COLORS[currentPiece.type]);
+          }
+        }
+      }
+    }
   }
 }
 
@@ -774,6 +807,7 @@ document.addEventListener("keydown", e => {
       
     case "ArrowUp":
       rotatePiece();
+      draw();
       break;
       
     case " ":
@@ -883,6 +917,7 @@ canvas.addEventListener("touchend", e => {
   if (deltaTime < TAP_THRESHOLD && absDeltaX < TAP_MOVE_THRESHOLD && absDeltaY < TAP_MOVE_THRESHOLD) {
     // Tap - rotate piece
     rotatePiece();
+    draw();
   } else if (absDeltaY > SWIPE_THRESHOLD) {
     // Swipe vertical
     if (deltaY > 0) {
@@ -894,6 +929,7 @@ canvas.addEventListener("touchend", e => {
     } else {
       // Swipe up - rotate
       rotatePiece();
+      draw();
     }
   }
 });
@@ -953,6 +989,7 @@ canvas.addEventListener('mouseleave', e => {
 canvas.addEventListener('click', (e) => {
   if (gameRunning && !gamePaused && !mouseIsDown) {
     rotatePiece();
+    draw();
   }
 });
 
@@ -967,9 +1004,9 @@ canvas.addEventListener('contextmenu', e => e.preventDefault());
 
 // Hiển thị thông báo khi tải trang
 console.log("Tetris Mobile - Xoay mượt đã fix");
-console.log("Đã sửa: Xoay mượt, không giật");
-console.log("Đã sửa: Không bị dịch sang trái");
+console.log("Đã sửa: Xoay mượt cho khối S và I sát tường");
 console.log("Đã sửa: Wall kicks theo chuẩn SRS");
+console.log("Đã sửa: Định dạng shape chính xác");
 </script>
 
 </body>
