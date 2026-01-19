@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Tetris Mobile - Đã Fix Xoay Khối I</title>
+<title>Tetris Mobile - Fix Xoay Mượt</title>
 
 <style>
 * {
@@ -329,16 +329,50 @@ const COLORS = [
   "#FF0000"   // Z - Red
 ];
 
+// Định nghĩa shape với tâm xoay cố định
 const SHAPES = [
   null,
-  [[1,1,1,1]],                          // I
-  [[1,1],[1,1]],                        // O
-  [[0,1,0],[1,1,1]],                    // T
-  [[1,0,0],[1,1,1]],                    // J
-  [[0,0,1],[1,1,1]],                    // L
-  [[0,1,1],[1,1,0]],                    // S
-  [[1,1,0],[0,1,1]]                     // Z
+  [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],  // I (tâm ở [1,1.5])
+  [[1,1],[1,1]],                               // O
+  [[0,1,0],[1,1,1],[0,0,0]],                   // T (tâm ở [1,1])
+  [[1,0,0],[1,1,1],[0,0,0]],                   // J (tâm ở [1,1])
+  [[0,0,1],[1,1,1],[0,0,0]],                   // L (tâm ở [1,1])
+  [[0,1,1],[1,1,0],[0,0,0]],                   // S (tâm ở [1,1])
+  [[1,1,0],[0,1,1],[0,0,0]]                    // Z (tâm ở [1,1])
 ];
+
+// Hàm lấy phần thực của shape (loại bỏ hàng/cột toàn 0)
+function getRealShape(shape) {
+  let minY = shape.length, maxY = -1, minX = shape[0].length, maxX = -1;
+  
+  for (let y = 0; y < shape.length; y++) {
+    for (let x = 0; x < shape[y].length; x++) {
+      if (shape[y][x]) {
+        minY = Math.min(minY, y);
+        maxY = Math.max(maxY, y);
+        minX = Math.min(minX, x);
+        maxX = Math.max(maxX, x);
+      }
+    }
+  }
+  
+  if (maxY === -1) return { shape: [[]], offsetX: 0, offsetY: 0 };
+  
+  const realShape = [];
+  for (let y = minY; y <= maxY; y++) {
+    const row = [];
+    for (let x = minX; x <= maxX; x++) {
+      row.push(shape[y][x]);
+    }
+    realShape.push(row);
+  }
+  
+  return {
+    shape: realShape,
+    offsetX: minX,
+    offsetY: minY
+  };
+}
 
 let board = [];
 let currentPiece;
@@ -369,10 +403,20 @@ function createBoard() {
 
 function createPiece() {
   const type = Math.floor(Math.random() * 7) + 1;
+  const fullShape = SHAPES[type].map(row => [...row]);
+  const { shape, offsetX, offsetY } = getRealShape(fullShape);
+  
   return {
     type,
-    shape: SHAPES[type].map(row => [...row]),
-    x: Math.floor(COLS/2) - Math.floor(SHAPES[type][0].length/2),
+    shape: shape,
+    fullShape: fullShape,
+    offsetX: offsetX,
+    offsetY: offsetY,
+    // Lưu vị trí gốc (không tính offset)
+    baseX: Math.floor(COLS/2) - Math.floor(fullShape[0].length/2),
+    baseY: 0,
+    // Vị trí hiển thị
+    x: Math.floor(COLS/2) - Math.floor(fullShape[0].length/2),
     y: 0
   };
 }
@@ -398,136 +442,125 @@ function merge() {
   });
 }
 
-// ========== FIX ĐẶC BIỆT CHO KHỐI I ==========
+// ========== XOAY MƯỢT VÀ GIỮ VỊ TRÍ ==========
 function rotatePiece() {
-  const rotated = currentPiece.shape[0].map((_, i) => 
-    currentPiece.shape.map(row => row[i]).reverse()
-  );
+  // Lưu trạng thái hiện tại để phục hồi nếu cần
+  const originalShape = currentPiece.shape;
+  const originalFullShape = currentPiece.fullShape;
+  const originalX = currentPiece.x;
+  const originalY = currentPiece.y;
+  const originalOffsetX = currentPiece.offsetX;
+  const originalOffsetY = currentPiece.offsetY;
   
-  let success = false;
-  
-  // Đặc biệt xử lý khối I (type 1)
-  if (currentPiece.type === 1) {
-    success = rotateIPiece(rotated);
-  } else {
-    // Xử lý các khối khác
-    success = rotateOtherPieces(rotated);
-  }
-  
-  // Hiệu ứng visual khi xoay không thành công
-  if (!success && gameRunning && !gamePaused) {
-    // Tạo hiệu ứng nhấp nháy nhanh
-    canvas.style.opacity = "0.8";
-    setTimeout(() => {
-      canvas.style.opacity = "1";
-    }, 100);
-  }
-  
-  draw();
-  return success;
-}
-
-function rotateIPiece(rotated) {
-  const currentWidth = currentPiece.shape[0].length;
-  const currentHeight = currentPiece.shape.length;
-  
-  // Tạo danh sách các vị trí thử nghiệm cho khối I (Wall kicks cho khối I)
-  const testPositions = [];
-  
-  // Vị trí hiện tại
-  testPositions.push({x: currentPiece.x, y: currentPiece.y});
-  
-  // Các vị trí kick tiêu chuẩn cho khối I (theo Tetris Guideline)
-  if (currentWidth === 4) {
-    // Từ ngang sang dọc
-    testPositions.push({x: currentPiece.x - 2, y: currentPiece.y}); // Trái 2
-    testPositions.push({x: currentPiece.x + 1, y: currentPiece.y}); // Phải 1
-    testPositions.push({x: currentPiece.x - 1, y: currentPiece.y}); // Trái 1
-    testPositions.push({x: currentPiece.x + 2, y: currentPiece.y}); // Phải 2
-    testPositions.push({x: currentPiece.x - 3, y: currentPiece.y}); // Trái 3 (cho sát tường phải)
-    testPositions.push({x: currentPiece.x - 4, y: currentPiece.y}); // Trái 4 (cho sát tường phải)
-  } else if (currentHeight === 4) {
-    // Từ dọc sang ngang
-    testPositions.push({x: currentPiece.x + 2, y: currentPiece.y}); // Phải 2
-    testPositions.push({x: currentPiece.x - 1, y: currentPiece.y}); // Trái 1
-    testPositions.push({x: currentPiece.x + 1, y: currentPiece.y}); // Phải 1
-    testPositions.push({x: currentPiece.x - 2, y: currentPiece.y}); // Trái 2
-    testPositions.push({x: currentPiece.x + 3, y: currentPiece.y}); // Phải 3 (cho sát tường trái)
-    testPositions.push({x: currentPiece.x - 3, y: currentPiece.y}); // Trái 3 (cho sát tường phải)
-  }
-  
-  // Thêm một số vị trí đặc biệt
-  testPositions.push({x: currentPiece.x, y: currentPiece.y - 1}); // Lên 1
-  testPositions.push({x: currentPiece.x, y: currentPiece.y + 1}); // Xuống 1
-  
-  // Thử tất cả các vị trí
-  for (const pos of testPositions) {
-    if (!collide(pos.x, pos.y, rotated)) {
-      currentPiece.shape = rotated;
-      currentPiece.x = pos.x;
-      currentPiece.y = pos.y;
-      return true;
-    }
-  }
-  
-  return false;
-}
-
-function rotateOtherPieces(rotated) {
-  // Thử xoay tại vị trí hiện tại
-  if (!collide(currentPiece.x, currentPiece.y, rotated)) {
-    currentPiece.shape = rotated;
-    return true;
-  }
-  
-  // Wall kick sang trái 1 ô
-  if (!collide(currentPiece.x - 1, currentPiece.y, rotated)) {
-    currentPiece.shape = rotated;
-    currentPiece.x--;
-    return true;
-  }
-  
-  // Wall kick sang phải 1 ô
-  if (!collide(currentPiece.x + 1, currentPiece.y, rotated)) {
-    currentPiece.shape = rotated;
-    currentPiece.x++;
-    return true;
-  }
-  
-  // Wall kick xuống 1 ô
-  if (!collide(currentPiece.x, currentPiece.y + 1, rotated)) {
-    currentPiece.shape = rotated;
-    currentPiece.y++;
-    return true;
-  }
-  
-  // Wall kick lên 1 ô
-  if (!collide(currentPiece.x, currentPiece.y - 1, rotated)) {
-    currentPiece.shape = rotated;
-    currentPiece.y--;
-    return true;
-  }
-  
-  // Wall kick sang trái 2 ô
-  if (!collide(currentPiece.x - 2, currentPiece.y, rotated)) {
-    currentPiece.shape = rotated;
-    currentPiece.x -= 2;
-    return true;
-  }
-  
-  // Wall kick sang phải 2 ô
-  if (!collide(currentPiece.x + 2, currentPiece.y, rotated)) {
-    currentPiece.shape = rotated;
-    currentPiece.x += 2;
-    return true;
-  }
-  
-  // Đặc biệt cho khối O (hình vuông) - không cần xoay
+  // Khối O không xoay
   if (currentPiece.type === 2) {
     return false;
   }
   
-  return false;
+  // Tạo shape xoay từ fullShape
+  const size = currentPiece.fullShape.length;
+  const rotatedFull = Array.from({length: size}, () => Array(size).fill(0));
+  
+  // Xoay fullShape 90 độ theo chiều kim đồng hồ
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      if (currentPiece.fullShape[y][x]) {
+        rotatedFull[x][size - 1 - y] = currentPiece.type;
+      }
+    }
+  }
+  
+  // Lấy phần thực của shape đã xoay
+  const { shape: rotatedShape, offsetX: newOffsetX, offsetY: newOffsetY } = getRealShape(rotatedFull);
+  
+  // Tính toán vị trí mới để GIỮ ĐÚNG TÂM
+  // Tâm của fullShape cũ
+  const oldCenterX = Math.floor(size / 2);
+  const oldCenterY = Math.floor(size / 2);
+  
+  // Tâm của fullShape mới (vẫn ở giữa vì cùng kích thước)
+  const newCenterX = Math.floor(size / 2);
+  const newCenterY = Math.floor(size / 2);
+  
+  // Tính offset thay đổi từ tâm đến phần thực
+  const oldRealOffsetX = currentPiece.offsetX - oldCenterX;
+  const oldRealOffsetY = currentPiece.offsetY - oldCenterY;
+  const newRealOffsetX = newOffsetX - newCenterX;
+  const newRealOffsetY = newOffsetY - newCenterY;
+  
+  // Điều chỉnh vị trí để phần thực giữ nguyên vị trí tương đối
+  const adjustedX = currentPiece.x - oldRealOffsetX + newRealOffsetX;
+  const adjustedY = currentPiece.y - oldRealOffsetY + newRealOffsetY;
+  
+  // Danh sách các vị trí thử nghiệm (wall kicks)
+  const testPositions = [
+    {x: adjustedX, y: adjustedY},                    // Vị trí tính toán
+    {x: adjustedX - 1, y: adjustedY},                // Trái 1
+    {x: adjustedX + 1, y: adjustedY},                // Phải 1
+    {x: adjustedX, y: adjustedY - 1},                // Lên 1
+    {x: adjustedX, y: adjustedY + 1},                // Xuống 1
+    {x: adjustedX - 2, y: adjustedY},                // Trái 2 (cho khối I)
+    {x: adjustedX + 2, y: adjustedY},                // Phải 2 (cho khối I)
+    {x: adjustedX - 1, y: adjustedY - 1},            // Trái-Lên
+    {x: adjustedX + 1, y: adjustedY - 1},            // Phải-Lên
+  ];
+  
+  // Thêm nhiều vị trí hơn cho khối I
+  if (currentPiece.type === 1) {
+    testPositions.push(
+      {x: adjustedX - 3, y: adjustedY},              // Trái 3
+      {x: adjustedX + 3, y: adjustedY},              // Phải 3
+      {x: adjustedX - 1, y: adjustedY + 1},          // Trái-Xuống
+      {x: adjustedX + 1, y: adjustedY + 1},          // Phải-Xuống
+      {x: adjustedX, y: adjustedY - 2},              // Lên 2
+      {x: adjustedX, y: adjustedY + 2}               // Xuống 2
+    );
+  }
+  
+  // Thử tất cả các vị trí
+  let success = false;
+  for (const pos of testPositions) {
+    // Kiểm tra biên và không cho đi lên quá
+    if (pos.y < 0) continue;
+    
+    if (!collide(pos.x, pos.y, rotatedShape)) {
+      currentPiece.shape = rotatedShape;
+      currentPiece.fullShape = rotatedFull;
+      currentPiece.offsetX = newOffsetX;
+      currentPiece.offsetY = newOffsetY;
+      currentPiece.x = pos.x;
+      currentPiece.y = pos.y;
+      success = true;
+      break;
+    }
+  }
+  
+  if (!success) {
+    // Khôi phục trạng thái cũ
+    currentPiece.shape = originalShape;
+    currentPiece.fullShape = originalFullShape;
+    currentPiece.x = originalX;
+    currentPiece.y = originalY;
+    currentPiece.offsetX = originalOffsetX;
+    currentPiece.offsetY = originalOffsetY;
+    
+    // Hiệu ứng xoay thất bại
+    canvas.style.opacity = "0.8";
+    setTimeout(() => {
+      canvas.style.opacity = "1";
+    }, 100);
+    
+    return false;
+  }
+  
+  // Hiệu ứng xoay thành công
+  canvas.style.transform = "scale(1.02)";
+  setTimeout(() => {
+    canvas.style.transform = "scale(1)";
+  }, 150);
+  
+  draw();
+  return true;
 }
 
 function clearLines() {
@@ -616,6 +649,14 @@ function draw() {
         if (v) drawBlock(currentPiece.x + x, currentPiece.y + y, COLORS[currentPiece.type]);
       });
     });
+    
+    // Vẽ tâm xoay (debug - có thể bỏ)
+    // const centerX = currentPiece.x + currentPiece.offsetX - Math.floor(currentPiece.fullShape[0].length/2);
+    // const centerY = currentPiece.y + currentPiece.offsetY - Math.floor(currentPiece.fullShape.length/2);
+    // ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+    // ctx.beginPath();
+    // ctx.arc(centerX * BLOCK, centerY * BLOCK, 3, 0, Math.PI * 2);
+    // ctx.fill();
   }
 }
 
@@ -983,13 +1024,9 @@ document.addEventListener('touchmove', function(e) {
 canvas.addEventListener('contextmenu', e => e.preventDefault());
 
 // Hiển thị thông báo khi tải trang
-console.log("Tetris Mobile - Đã fix lỗi xoay khối I");
-console.log("Hướng dẫn:");
-console.log("- Nhấn mũi tên để di chuyển/xoay");
-console.log("- Nhấn Space để thả nhanh");
-console.log("- Chạm vào màn hình để xoay");
-console.log("- Vuốt ngang để di chuyển");
-console.log("- Vuốt dọc để xoay/thả nhanh");
+console.log("Tetris Mobile - Fix xoay mượt");
+console.log("Đã sửa: Không bị giật khi xoay");
+console.log("Đã sửa: Không bị dịch sang trái khi xoay nhiều lần");
 </script>
 
 </body>
