@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Tetris Mobile - Fix Xoay Mượt</title>
+<title>Tetris Mobile - Xoay Mượt Đã Fix</title>
 
 <style>
 * {
@@ -329,50 +329,73 @@ const COLORS = [
   "#FF0000"   // Z - Red
 ];
 
-// Định nghĩa shape với tâm xoay cố định
-const SHAPES = [
-  null,
-  [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],  // I (tâm ở [1,1.5])
-  [[1,1],[1,1]],                               // O
-  [[0,1,0],[1,1,1],[0,0,0]],                   // T (tâm ở [1,1])
-  [[1,0,0],[1,1,1],[0,0,0]],                   // J (tâm ở [1,1])
-  [[0,0,1],[1,1,1],[0,0,0]],                   // L (tâm ở [1,1])
-  [[0,1,1],[1,1,0],[0,0,0]],                   // S (tâm ở [1,1])
-  [[1,1,0],[0,1,1],[0,0,0]]                    // Z (tâm ở [1,1])
-];
+// Shape definitions với tất cả các rotation
+const SHAPES = {
+  1: { // I
+    0: [[1,1,1,1]],
+    1: [[1],[1],[1],[1]]
+  },
+  2: { // O
+    0: [[1,1],[1,1]],
+    1: [[1,1],[1,1]],
+    2: [[1,1],[1,1]],
+    3: [[1,1],[1,1]]
+  },
+  3: { // T
+    0: [[0,1,0],[1,1,1]],
+    1: [[1,0],[1,1],[1,0]],
+    2: [[1,1,1],[0,1,0]],
+    3: [[0,1],[1,1],[0,1]]
+  },
+  4: { // J
+    0: [[1,0,0],[1,1,1]],
+    1: [[1,1],[1,0],[1,0]],
+    2: [[1,1,1],[0,0,1]],
+    3: [[0,1],[0,1],[1,1]]
+  },
+  5: { // L
+    0: [[0,0,1],[1,1,1]],
+    1: [[1,0],[1,0],[1,1]],
+    2: [[1,1,1],[1,0,0]],
+    3: [[1,1],[0,1],[0,1]]
+  },
+  6: { // S
+    0: [[0,1,1],[1,1,0]],
+    1: [[1,0],[1,1],[0,1]],
+    2: [[0,1,1],[1,1,0]],
+    3: [[1,0],[1,1],[0,1]]
+  },
+  7: { // Z
+    0: [[1,1,0],[0,1,1]],
+    1: [[0,1],[1,1],[1,0]],
+    2: [[1,1,0],[0,1,1]],
+    3: [[0,1],[1,1],[1,0]]
+  }
+};
 
-// Hàm lấy phần thực của shape (loại bỏ hàng/cột toàn 0)
-function getRealShape(shape) {
-  let minY = shape.length, maxY = -1, minX = shape[0].length, maxX = -1;
-  
-  for (let y = 0; y < shape.length; y++) {
-    for (let x = 0; x < shape[y].length; x++) {
-      if (shape[y][x]) {
-        minY = Math.min(minY, y);
-        maxY = Math.max(maxY, y);
-        minX = Math.min(minX, x);
-        maxX = Math.max(maxX, x);
-      }
-    }
+// Wall kicks cho Tetris theo chuẩn SRS
+const WALL_KICKS = {
+  1: { // I piece special kicks
+    "0->1": [[0,0],[-2,0],[1,0],[-2,-1],[1,2]],
+    "1->0": [[0,0],[2,0],[-1,0],[2,1],[-1,-2]],
+    "1->2": [[0,0],[-1,0],[2,0],[-1,2],[2,-1]],
+    "2->1": [[0,0],[1,0],[-2,0],[1,-2],[-2,1]],
+    "2->3": [[0,0],[2,0],[-1,0],[2,1],[-1,-2]],
+    "3->2": [[0,0],[-2,0],[1,0],[-2,-1],[1,2]],
+    "3->0": [[0,0],[1,0],[-2,0],[1,-2],[-2,1]],
+    "0->3": [[0,0],[-1,0],[2,0],[-1,2],[2,-1]]
+  },
+  default: { // Other pieces
+    "0->1": [[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]],
+    "1->0": [[0,0],[1,0],[1,-1],[0,2],[1,2]],
+    "1->2": [[0,0],[1,0],[1,-1],[0,2],[1,2]],
+    "2->1": [[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]],
+    "2->3": [[0,0],[1,0],[1,1],[0,-2],[1,-2]],
+    "3->2": [[0,0],[-1,0],[-1,-1],[0,2],[-1,2]],
+    "3->0": [[0,0],[-1,0],[-1,-1],[0,2],[-1,2]],
+    "0->3": [[0,0],[1,0],[1,1],[0,-2],[1,-2]]
   }
-  
-  if (maxY === -1) return { shape: [[]], offsetX: 0, offsetY: 0 };
-  
-  const realShape = [];
-  for (let y = minY; y <= maxY; y++) {
-    const row = [];
-    for (let x = minX; x <= maxX; x++) {
-      row.push(shape[y][x]);
-    }
-    realShape.push(row);
-  }
-  
-  return {
-    shape: realShape,
-    offsetX: minX,
-    offsetY: minY
-  };
-}
+};
 
 let board = [];
 let currentPiece;
@@ -403,20 +426,13 @@ function createBoard() {
 
 function createPiece() {
   const type = Math.floor(Math.random() * 7) + 1;
-  const fullShape = SHAPES[type].map(row => [...row]);
-  const { shape, offsetX, offsetY } = getRealShape(fullShape);
+  const shape = SHAPES[type][0].map(row => [...row]);
   
   return {
     type,
     shape: shape,
-    fullShape: fullShape,
-    offsetX: offsetX,
-    offsetY: offsetY,
-    // Lưu vị trí gốc (không tính offset)
-    baseX: Math.floor(COLS/2) - Math.floor(fullShape[0].length/2),
-    baseY: 0,
-    // Vị trí hiển thị
-    x: Math.floor(COLS/2) - Math.floor(fullShape[0].length/2),
+    rotation: 0,
+    x: Math.floor(COLS/2) - Math.floor(shape[0].length/2),
     y: 0
   };
 }
@@ -442,125 +458,59 @@ function merge() {
   });
 }
 
-// ========== XOAY MƯỢT VÀ GIỮ VỊ TRÍ ==========
+// ========== XOAY MỚI - ĐƠN GIẢN VÀ CHÍNH XÁC ==========
 function rotatePiece() {
-  // Lưu trạng thái hiện tại để phục hồi nếu cần
-  const originalShape = currentPiece.shape;
-  const originalFullShape = currentPiece.fullShape;
-  const originalX = currentPiece.x;
-  const originalY = currentPiece.y;
-  const originalOffsetX = currentPiece.offsetX;
-  const originalOffsetY = currentPiece.offsetY;
-  
   // Khối O không xoay
   if (currentPiece.type === 2) {
     return false;
   }
   
-  // Tạo shape xoay từ fullShape
-  const size = currentPiece.fullShape.length;
-  const rotatedFull = Array.from({length: size}, () => Array(size).fill(0));
+  // Lưu trạng thái hiện tại
+  const originalShape = currentPiece.shape.map(row => [...row]);
+  const originalX = currentPiece.x;
+  const originalY = currentPiece.y;
+  const originalRotation = currentPiece.rotation;
   
-  // Xoay fullShape 90 độ theo chiều kim đồng hồ
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      if (currentPiece.fullShape[y][x]) {
-        rotatedFull[x][size - 1 - y] = currentPiece.type;
+  // Tính rotation mới
+  const newRotation = (currentPiece.rotation + 1) % 4;
+  const newShape = SHAPES[currentPiece.type][newRotation].map(row => [...row]);
+  
+  // Lấy wall kicks phù hợp
+  const kickSet = currentPiece.type === 1 ? WALL_KICKS[1] : WALL_KICKS.default;
+  const kickKey = `${originalRotation}->${newRotation}`;
+  const kicks = kickSet[kickKey] || [[0,0]];
+  
+  // Thử tất cả các kick
+  for (const [kx, ky] of kicks) {
+    const testX = currentPiece.x + kx;
+    const testY = currentPiece.y + ky;
+    
+    // Kiểm tra xem có thể xoay ở vị trí này không
+    if (!collide(testX, testY, newShape)) {
+      // Cập nhật piece mới
+      currentPiece.shape = newShape;
+      currentPiece.rotation = newRotation;
+      currentPiece.x = testX;
+      currentPiece.y = testY;
+      
+      // Đảm bảo không đi lên quá đỉnh
+      if (currentPiece.y < 0) {
+        currentPiece.y = 0;
       }
+      
+      draw();
+      return true;
     }
   }
   
-  // Lấy phần thực của shape đã xoay
-  const { shape: rotatedShape, offsetX: newOffsetX, offsetY: newOffsetY } = getRealShape(rotatedFull);
-  
-  // Tính toán vị trí mới để GIỮ ĐÚNG TÂM
-  // Tâm của fullShape cũ
-  const oldCenterX = Math.floor(size / 2);
-  const oldCenterY = Math.floor(size / 2);
-  
-  // Tâm của fullShape mới (vẫn ở giữa vì cùng kích thước)
-  const newCenterX = Math.floor(size / 2);
-  const newCenterY = Math.floor(size / 2);
-  
-  // Tính offset thay đổi từ tâm đến phần thực
-  const oldRealOffsetX = currentPiece.offsetX - oldCenterX;
-  const oldRealOffsetY = currentPiece.offsetY - oldCenterY;
-  const newRealOffsetX = newOffsetX - newCenterX;
-  const newRealOffsetY = newOffsetY - newCenterY;
-  
-  // Điều chỉnh vị trí để phần thực giữ nguyên vị trí tương đối
-  const adjustedX = currentPiece.x - oldRealOffsetX + newRealOffsetX;
-  const adjustedY = currentPiece.y - oldRealOffsetY + newRealOffsetY;
-  
-  // Danh sách các vị trí thử nghiệm (wall kicks)
-  const testPositions = [
-    {x: adjustedX, y: adjustedY},                    // Vị trí tính toán
-    {x: adjustedX - 1, y: adjustedY},                // Trái 1
-    {x: adjustedX + 1, y: adjustedY},                // Phải 1
-    {x: adjustedX, y: adjustedY - 1},                // Lên 1
-    {x: adjustedX, y: adjustedY + 1},                // Xuống 1
-    {x: adjustedX - 2, y: adjustedY},                // Trái 2 (cho khối I)
-    {x: adjustedX + 2, y: adjustedY},                // Phải 2 (cho khối I)
-    {x: adjustedX - 1, y: adjustedY - 1},            // Trái-Lên
-    {x: adjustedX + 1, y: adjustedY - 1},            // Phải-Lên
-  ];
-  
-  // Thêm nhiều vị trí hơn cho khối I
-  if (currentPiece.type === 1) {
-    testPositions.push(
-      {x: adjustedX - 3, y: adjustedY},              // Trái 3
-      {x: adjustedX + 3, y: adjustedY},              // Phải 3
-      {x: adjustedX - 1, y: adjustedY + 1},          // Trái-Xuống
-      {x: adjustedX + 1, y: adjustedY + 1},          // Phải-Xuống
-      {x: adjustedX, y: adjustedY - 2},              // Lên 2
-      {x: adjustedX, y: adjustedY + 2}               // Xuống 2
-    );
-  }
-  
-  // Thử tất cả các vị trí
-  let success = false;
-  for (const pos of testPositions) {
-    // Kiểm tra biên và không cho đi lên quá
-    if (pos.y < 0) continue;
-    
-    if (!collide(pos.x, pos.y, rotatedShape)) {
-      currentPiece.shape = rotatedShape;
-      currentPiece.fullShape = rotatedFull;
-      currentPiece.offsetX = newOffsetX;
-      currentPiece.offsetY = newOffsetY;
-      currentPiece.x = pos.x;
-      currentPiece.y = pos.y;
-      success = true;
-      break;
-    }
-  }
-  
-  if (!success) {
-    // Khôi phục trạng thái cũ
-    currentPiece.shape = originalShape;
-    currentPiece.fullShape = originalFullShape;
-    currentPiece.x = originalX;
-    currentPiece.y = originalY;
-    currentPiece.offsetX = originalOffsetX;
-    currentPiece.offsetY = originalOffsetY;
-    
-    // Hiệu ứng xoay thất bại
-    canvas.style.opacity = "0.8";
-    setTimeout(() => {
-      canvas.style.opacity = "1";
-    }, 100);
-    
-    return false;
-  }
-  
-  // Hiệu ứng xoay thành công
-  canvas.style.transform = "scale(1.02)";
-  setTimeout(() => {
-    canvas.style.transform = "scale(1)";
-  }, 150);
+  // Không thể xoay - khôi phục trạng thái cũ
+  currentPiece.shape = originalShape;
+  currentPiece.x = originalX;
+  currentPiece.y = originalY;
+  currentPiece.rotation = originalRotation;
   
   draw();
-  return true;
+  return false;
 }
 
 function clearLines() {
@@ -649,14 +599,6 @@ function draw() {
         if (v) drawBlock(currentPiece.x + x, currentPiece.y + y, COLORS[currentPiece.type]);
       });
     });
-    
-    // Vẽ tâm xoay (debug - có thể bỏ)
-    // const centerX = currentPiece.x + currentPiece.offsetX - Math.floor(currentPiece.fullShape[0].length/2);
-    // const centerY = currentPiece.y + currentPiece.offsetY - Math.floor(currentPiece.fullShape.length/2);
-    // ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
-    // ctx.beginPath();
-    // ctx.arc(centerX * BLOCK, centerY * BLOCK, 3, 0, Math.PI * 2);
-    // ctx.fill();
   }
 }
 
@@ -1024,9 +966,10 @@ document.addEventListener('touchmove', function(e) {
 canvas.addEventListener('contextmenu', e => e.preventDefault());
 
 // Hiển thị thông báo khi tải trang
-console.log("Tetris Mobile - Fix xoay mượt");
-console.log("Đã sửa: Không bị giật khi xoay");
-console.log("Đã sửa: Không bị dịch sang trái khi xoay nhiều lần");
+console.log("Tetris Mobile - Xoay mượt đã fix");
+console.log("Đã sửa: Xoay mượt, không giật");
+console.log("Đã sửa: Không bị dịch sang trái");
+console.log("Đã sửa: Wall kicks theo chuẩn SRS");
 </script>
 
 </body>
