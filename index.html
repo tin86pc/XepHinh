@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Tetris Mobile</title>
+<title>Tetris Mobile - Đã Fix Xoay Khối I</title>
 
 <style>
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  touch-action: none;
+  touch-action: manipulation;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
@@ -29,7 +29,7 @@ body {
   color: white;
 }
 
-/* Header - Đã bỏ border-bottom */
+/* Header */
 .game-header {
   height: 60px;
   min-height: 60px;
@@ -128,7 +128,7 @@ body {
   padding: 0 20px;
 }
 
-/* Controls - Đã bỏ border-top */
+/* Controls */
 .controls-container {
   height: 80px;
   min-height: 80px;
@@ -193,6 +193,19 @@ body {
   border-radius: 50%;
   background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3) 0%, transparent 70%);
   pointer-events: none;
+}
+
+/* Thông báo tương tác */
+.tap-hint {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 14px;
+  color: #a78bfa;
+  opacity: 0.8;
+  pointer-events: none;
+  transition: opacity 0.5s;
 }
 
 /* Mobile adjustments */
@@ -272,6 +285,7 @@ body {
 
 <div class="main-game-area">
   <canvas id="game"></canvas>
+  <div class="tap-hint" id="tapHint">👆 Chạm để xoay, vuốt để di chuyển</div>
   
   <div class="pause-overlay" id="pauseOverlay">
     <div class="pause-title">⏸️ TẠM DỪNG</div>
@@ -298,17 +312,32 @@ body {
 // ===================== CONFIG =====================
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
+const tapHint = document.getElementById("tapHint");
 
 const COLS = 10;
 const ROWS = 20;
 const BLOCK = 30;
 
-const COLORS = [null, "#00FFFF","#FFFF00","#800080","#0000FF","#FFA500","#00FF00","#FF0000"];
+const COLORS = [
+  null, 
+  "#00FFFF",  // I - Cyan
+  "#FFFF00",  // O - Yellow
+  "#800080",  // T - Purple
+  "#0000FF",  // J - Blue
+  "#FFA500",  // L - Orange
+  "#00FF00",  // S - Green
+  "#FF0000"   // Z - Red
+];
 
 const SHAPES = [
   null,
-  [[1,1,1,1]], [[1,1],[1,1]], [[0,1,0],[1,1,1]],
-  [[1,0,0],[1,1,1]], [[0,0,1],[1,1,1]], [[0,1,1],[1,1,0]], [[1,1,0],[0,1,1]]
+  [[1,1,1,1]],                          // I
+  [[1,1],[1,1]],                        // O
+  [[0,1,0],[1,1,1]],                    // T
+  [[1,0,0],[1,1,1]],                    // J
+  [[0,0,1],[1,1,1]],                    // L
+  [[0,1,1],[1,1,0]],                    // S
+  [[1,1,0],[0,1,1]]                     // Z
 ];
 
 let board = [];
@@ -343,7 +372,7 @@ function createPiece() {
   return {
     type,
     shape: SHAPES[type].map(row => [...row]),
-    x: Math.floor(COLS/2)-1,
+    x: Math.floor(COLS/2) - Math.floor(SHAPES[type][0].length/2),
     y: 0
   };
 }
@@ -369,13 +398,136 @@ function merge() {
   });
 }
 
+// ========== FIX ĐẶC BIỆT CHO KHỐI I ==========
 function rotatePiece() {
   const rotated = currentPiece.shape[0].map((_, i) => 
     currentPiece.shape.map(row => row[i]).reverse()
   );
+  
+  let success = false;
+  
+  // Đặc biệt xử lý khối I (type 1)
+  if (currentPiece.type === 1) {
+    success = rotateIPiece(rotated);
+  } else {
+    // Xử lý các khối khác
+    success = rotateOtherPieces(rotated);
+  }
+  
+  // Hiệu ứng visual khi xoay không thành công
+  if (!success && gameRunning && !gamePaused) {
+    // Tạo hiệu ứng nhấp nháy nhanh
+    canvas.style.opacity = "0.8";
+    setTimeout(() => {
+      canvas.style.opacity = "1";
+    }, 100);
+  }
+  
+  draw();
+  return success;
+}
+
+function rotateIPiece(rotated) {
+  const currentWidth = currentPiece.shape[0].length;
+  const currentHeight = currentPiece.shape.length;
+  
+  // Tạo danh sách các vị trí thử nghiệm cho khối I (Wall kicks cho khối I)
+  const testPositions = [];
+  
+  // Vị trí hiện tại
+  testPositions.push({x: currentPiece.x, y: currentPiece.y});
+  
+  // Các vị trí kick tiêu chuẩn cho khối I (theo Tetris Guideline)
+  if (currentWidth === 4) {
+    // Từ ngang sang dọc
+    testPositions.push({x: currentPiece.x - 2, y: currentPiece.y}); // Trái 2
+    testPositions.push({x: currentPiece.x + 1, y: currentPiece.y}); // Phải 1
+    testPositions.push({x: currentPiece.x - 1, y: currentPiece.y}); // Trái 1
+    testPositions.push({x: currentPiece.x + 2, y: currentPiece.y}); // Phải 2
+    testPositions.push({x: currentPiece.x - 3, y: currentPiece.y}); // Trái 3 (cho sát tường phải)
+    testPositions.push({x: currentPiece.x - 4, y: currentPiece.y}); // Trái 4 (cho sát tường phải)
+  } else if (currentHeight === 4) {
+    // Từ dọc sang ngang
+    testPositions.push({x: currentPiece.x + 2, y: currentPiece.y}); // Phải 2
+    testPositions.push({x: currentPiece.x - 1, y: currentPiece.y}); // Trái 1
+    testPositions.push({x: currentPiece.x + 1, y: currentPiece.y}); // Phải 1
+    testPositions.push({x: currentPiece.x - 2, y: currentPiece.y}); // Trái 2
+    testPositions.push({x: currentPiece.x + 3, y: currentPiece.y}); // Phải 3 (cho sát tường trái)
+    testPositions.push({x: currentPiece.x - 3, y: currentPiece.y}); // Trái 3 (cho sát tường phải)
+  }
+  
+  // Thêm một số vị trí đặc biệt
+  testPositions.push({x: currentPiece.x, y: currentPiece.y - 1}); // Lên 1
+  testPositions.push({x: currentPiece.x, y: currentPiece.y + 1}); // Xuống 1
+  
+  // Thử tất cả các vị trí
+  for (const pos of testPositions) {
+    if (!collide(pos.x, pos.y, rotated)) {
+      currentPiece.shape = rotated;
+      currentPiece.x = pos.x;
+      currentPiece.y = pos.y;
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+function rotateOtherPieces(rotated) {
+  // Thử xoay tại vị trí hiện tại
   if (!collide(currentPiece.x, currentPiece.y, rotated)) {
     currentPiece.shape = rotated;
+    return true;
   }
+  
+  // Wall kick sang trái 1 ô
+  if (!collide(currentPiece.x - 1, currentPiece.y, rotated)) {
+    currentPiece.shape = rotated;
+    currentPiece.x--;
+    return true;
+  }
+  
+  // Wall kick sang phải 1 ô
+  if (!collide(currentPiece.x + 1, currentPiece.y, rotated)) {
+    currentPiece.shape = rotated;
+    currentPiece.x++;
+    return true;
+  }
+  
+  // Wall kick xuống 1 ô
+  if (!collide(currentPiece.x, currentPiece.y + 1, rotated)) {
+    currentPiece.shape = rotated;
+    currentPiece.y++;
+    return true;
+  }
+  
+  // Wall kick lên 1 ô
+  if (!collide(currentPiece.x, currentPiece.y - 1, rotated)) {
+    currentPiece.shape = rotated;
+    currentPiece.y--;
+    return true;
+  }
+  
+  // Wall kick sang trái 2 ô
+  if (!collide(currentPiece.x - 2, currentPiece.y, rotated)) {
+    currentPiece.shape = rotated;
+    currentPiece.x -= 2;
+    return true;
+  }
+  
+  // Wall kick sang phải 2 ô
+  if (!collide(currentPiece.x + 2, currentPiece.y, rotated)) {
+    currentPiece.shape = rotated;
+    currentPiece.x += 2;
+    return true;
+  }
+  
+  // Đặc biệt cho khối O (hình vuông) - không cần xoay
+  if (currentPiece.type === 2) {
+    return false;
+  }
+  
+  return false;
 }
 
 function clearLines() {
@@ -487,6 +639,7 @@ function drop() {
       `;
       document.getElementById('pauseOverlay').classList.add('show');
       document.getElementById('pauseBtn').innerHTML = '⏸️';
+      clearInterval(dropTimer);
     }
   }
   draw();
@@ -508,11 +661,17 @@ function startGame() {
   document.getElementById('pauseBtn').innerHTML = '⏸️';
   
   draw();
-  drop();
-  draw();
   
   if (dropTimer) clearInterval(dropTimer);
   dropTimer = setInterval(drop, dropInterval);
+  
+  // Ẩn hint sau 3 giây
+  setTimeout(() => {
+    tapHint.style.opacity = '0';
+    setTimeout(() => {
+      tapHint.style.display = 'none';
+    }, 500);
+  }, 3000);
 }
 
 function resetGame() {
@@ -528,9 +687,11 @@ function togglePause() {
   if (gamePaused) {
     document.getElementById('pauseOverlay').classList.add('show');
     document.getElementById('pauseBtn').innerHTML = '▶️';
+    clearInterval(dropTimer);
   } else {
     document.getElementById('pauseOverlay').classList.remove('show');
     document.getElementById('pauseBtn').innerHTML = '⏸️';
+    dropTimer = setInterval(drop, dropInterval);
     draw();
   }
 }
@@ -630,7 +791,6 @@ document.addEventListener("keydown", e => {
       
     case "ArrowUp":
       rotatePiece();
-      draw();
       break;
       
     case " ":
@@ -740,7 +900,6 @@ canvas.addEventListener("touchend", e => {
   if (deltaTime < TAP_THRESHOLD && absDeltaX < TAP_MOVE_THRESHOLD && absDeltaY < TAP_MOVE_THRESHOLD) {
     // Tap - rotate piece
     rotatePiece();
-    draw();
   } else if (absDeltaY > SWIPE_THRESHOLD) {
     // Swipe vertical
     if (deltaY > 0) {
@@ -752,7 +911,6 @@ canvas.addEventListener("touchend", e => {
     } else {
       // Swipe up - rotate
       rotatePiece();
-      draw();
     }
   }
 });
@@ -812,7 +970,6 @@ canvas.addEventListener('mouseleave', e => {
 canvas.addEventListener('click', (e) => {
   if (gameRunning && !gamePaused && !mouseIsDown) {
     rotatePiece();
-    draw();
   }
 });
 
@@ -824,6 +981,15 @@ document.addEventListener('touchmove', function(e) {
 }, { passive: false });
 
 canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+// Hiển thị thông báo khi tải trang
+console.log("Tetris Mobile - Đã fix lỗi xoay khối I");
+console.log("Hướng dẫn:");
+console.log("- Nhấn mũi tên để di chuyển/xoay");
+console.log("- Nhấn Space để thả nhanh");
+console.log("- Chạm vào màn hình để xoay");
+console.log("- Vuốt ngang để di chuyển");
+console.log("- Vuốt dọc để xoay/thả nhanh");
 </script>
 
 </body>
