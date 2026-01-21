@@ -120,11 +120,37 @@ body {
   text-align: center;
 }
 
-.pause-overlay.show {
+.game-over-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.9);
+  backdrop-filter: blur(5px);
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+}
+
+.pause-overlay.show, .game-over-overlay.show {
   display: flex;
 }
 
 .pause-title {
+  font-size: 32px;
+  color: #ff5722;
+  margin-bottom: 15px;
+  font-weight: bold;
+  text-shadow: 0 0 15px rgba(255,87,34,0.7);
+}
+
+.game-over-title {
   font-size: 32px;
   color: #ff5722;
   margin-bottom: 15px;
@@ -138,6 +164,21 @@ body {
   margin: 5px 0;
   text-align: center;
   padding: 0 20px;
+}
+
+.game-over-text {
+  font-size: 18px;
+  color: #e0e0ff;
+  margin: 5px 0;
+  text-align: center;
+  padding: 0 20px;
+}
+
+.game-stats {
+  font-size: 16px;
+  color: #ffeb3b;
+  margin: 3px 0;
+  text-align: center;
 }
 
 /* QR Code Container */
@@ -241,6 +282,17 @@ body {
     0 -2px 5px rgba(255,255,255,0.1) inset;
 }
 
+.icon-button.restart {
+  background: linear-gradient(145deg, #9C27B0, #7B1FA2);
+  box-shadow: 
+    0 4px 15px rgba(156,39,176,0.6),
+    0 -2px 5px rgba(255,255,255,0.1) inset;
+  margin-top: 20px;
+  width: 80px;
+  height: 80px;
+  font-size: 34px;
+}
+
 .icon-button::after {
   content: '';
   position: absolute;
@@ -292,11 +344,17 @@ body {
     font-size: 26px;
   }
   
-  .pause-title {
+  .icon-button.restart {
+    width: 70px;
+    height: 70px;
+    font-size: 30px;
+  }
+  
+  .pause-title, .game-over-title {
     font-size: 28px;
   }
   
-  .pause-text {
+  .pause-text, .game-over-text {
     font-size: 16px;
   }
   
@@ -327,6 +385,12 @@ body {
     font-size: 24px;
   }
   
+  .icon-button.restart {
+    width: 65px;
+    height: 65px;
+    font-size: 28px;
+  }
+  
   .qr-container {
     margin: 5px 0;
   }
@@ -346,6 +410,12 @@ body {
     width: 50px;
     height: 50px;
     font-size: 22px;
+  }
+  
+  .icon-button.restart {
+    width: 60px;
+    height: 60px;
+    font-size: 26px;
   }
 }
 
@@ -390,6 +460,26 @@ body {
       <div class="qr-link">tin86pc.github.io/XepHinh/</div>
     </div>
   </div>
+  
+  <div class="game-over-overlay" id="gameOverOverlay">
+    <div class="game-over-title">🎮 GAME OVER</div>
+    <div class="game-stats" id="finalScore">Điểm: 0</div>
+    <div class="game-stats" id="finalLevel">Level: 1</div>
+    <div class="game-stats" id="finalSpeed">Tốc độ: 1x</div>
+    <div class="game-stats" id="finalLines">Dòng đã xóa: 0</div>
+    
+    <!-- Nút chơi lại -->
+    <button class="icon-button restart" onclick="resetGame()" title="Chơi lại">
+      🔄
+    </button>
+    
+    <!-- QR Code Section -->
+    <div class="qr-container">
+      <div class="qr-title">🔗 Chia sẻ game này:</div>
+      <div id="gameOverQrcode"></div>
+      <div class="qr-link">tin86pc.github.io/XepHinh/</div>
+    </div>
+  </div>
 </div>
 
 <div class="controls-container">
@@ -412,6 +502,7 @@ const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 const tapHint = document.getElementById("tapHint");
 const pauseOverlay = document.getElementById("pauseOverlay");
+const gameOverOverlay = document.getElementById("gameOverOverlay");
 
 const COLS = 10;
 const ROWS = 20;
@@ -720,6 +811,20 @@ function updatePauseOverlay() {
     // Generate QR code when pausing
     setTimeout(() => generateQRCode('qrcode'), 50);
   }
+}
+
+function showGameOver() {
+  // Cập nhật thông tin game over
+  document.getElementById('finalScore').textContent = `Điểm: ${score}`;
+  document.getElementById('finalLevel').textContent = `Level: ${level}`;
+  document.getElementById('finalSpeed').textContent = `Tốc độ: ${(1000/currentDropInterval).toFixed(1)}x`;
+  document.getElementById('finalLines').textContent = `Dòng đã xóa: ${totalLinesCleared}`;
+  
+  // Hiển thị overlay game over
+  gameOverOverlay.classList.add('show');
+  
+  // Generate QR code cho game over
+  setTimeout(() => generateQRCode('gameOverQrcode'), 50);
 }
 
 // ===================== GAME FUNCTIONS =====================
@@ -1040,27 +1145,12 @@ function drop() {
         playGameOverSound();
       }
       
-      pauseOverlay.innerHTML = `
-        <div class="pause-title">🎮 GAME OVER</div>
-        <div class="pause-text">Điểm: ${score}</div>
-        <div class="pause-text">Level: ${level}</div>
-        <div class="pause-text">Tốc độ: ${(1000/currentDropInterval).toFixed(1)}x</div>
-        <div class="pause-text">Dòng đã xóa: ${totalLinesCleared}</div>
-        <div class="pause-text">Chạm màn hình để chơi lại</div>
-        
-        <!-- QR Code Section -->
-        <div class="qr-container">
-          <div class="qr-title">🔗 Chia sẻ game này:</div>
-          <div id="qrcode"></div>
-          <div class="qr-link">${GAME_URL}</div>
-        </div>
-      `;
-      pauseOverlay.classList.add('show');
+      // Hiển thị màn hình game over
+      showGameOver();
+      
+      // Cập nhật nút pause
       document.getElementById('pauseBtn').innerHTML = '⏸️';
       clearInterval(dropTimer);
-      
-      // Generate QR code for game over screen
-      setTimeout(() => generateQRCode('qrcode'), 50);
     }
   }
   draw();
@@ -1078,7 +1168,10 @@ function startGame() {
   document.getElementById("score").textContent = "0";
   document.getElementById("level").textContent = "1";
   updateSpeedDisplay();
+  
+  // Ẩn tất cả overlay
   pauseOverlay.classList.remove('show');
+  gameOverOverlay.classList.remove('show');
   
   gameRunning = true;
   gamePaused = false;
@@ -1098,7 +1191,6 @@ function startGame() {
   }, 3000);
 }
 
-// Hàm reset game khi chạm vào màn hình game over
 function resetGame() {
   if (dropTimer) clearInterval(dropTimer);
   gameRunning = false;
@@ -1250,6 +1342,13 @@ document.addEventListener("keydown", e => {
     case "F":
       toggleFullscreen();
       break;
+      
+    case "r":
+    case "R":
+      if (!gameRunning) {
+        resetGame();
+      }
+      break;
   }
 });
 
@@ -1267,11 +1366,6 @@ canvas.addEventListener("touchstart", e => {
     touchStartTime = Date.now();
     isDragging = false;
     dragStartPieceX = currentPiece.x;
-  }
-  // Nếu game over, reset game khi chạm vào màn hình
-  else if (!gameRunning && pauseOverlay.classList.contains('show')) {
-    resetGame();
-    pauseOverlay.classList.remove('show');
   }
 });
 
@@ -1320,7 +1414,7 @@ canvas.addEventListener("touchmove", e => {
 });
 
 canvas.addEventListener("touchend", e => {
-  if (gamePaused || !gameRunning) return;
+  if (gamePaused) return;
   e.preventDefault();
   
   const touch = e.changedTouches[0];
