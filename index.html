@@ -3,7 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Tetris Mobile - Xoay Mượt Đã Fix</title>
+<title>🕹️ Tetris Mobile - Game Xếp Hình</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🕹️</text></svg>">
+
+<!-- Thêm thư viện QR Code -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 <style>
 * {
@@ -34,9 +38,23 @@ body {
   height: 60px;
   min-height: 60px;
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
   background: linear-gradient(180deg, #0a001a 0%, #090014 100%);
+  padding: 0 15px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.game-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #ff5722;
+  text-shadow: 0 0 10px rgba(255,87,34,0.7);
 }
 
 .score-display {
@@ -106,6 +124,8 @@ body {
   align-items: center;
   z-index: 100;
   border-radius: 12px;
+  padding: 20px;
+  text-align: center;
 }
 
 .pause-overlay.show {
@@ -128,14 +148,46 @@ body {
   padding: 0 20px;
 }
 
+/* QR Code Container */
+.qr-container {
+  margin: 20px 0;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  border: 2px solid #5a3eff;
+  max-width: 90%;
+}
+
+.qr-title {
+  font-size: 16px;
+  color: #4fc3f7;
+  margin-bottom: 10px;
+}
+
+#qrcode {
+  background: white;
+  padding: 10px;
+  border-radius: 8px;
+  display: inline-block;
+}
+
+.qr-link {
+  font-size: 14px;
+  color: #a78bfa;
+  margin-top: 10px;
+  word-break: break-all;
+}
+
 /* Controls */
 .controls-container {
-  height: 80px;
-  min-height: 80px;
+  height: 100px;
+  min-height: 100px;
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   background: linear-gradient(180deg, #090014 0%, #0a001a 100%);
+  gap: 10px;
 }
 
 .control-row {
@@ -183,6 +235,20 @@ body {
     0 -2px 5px rgba(255,255,255,0.1) inset;
 }
 
+.icon-button.sound {
+  background: linear-gradient(145deg, #4CAF50, #388E3C);
+  box-shadow: 
+    0 4px 15px rgba(76,175,80,0.6),
+    0 -2px 5px rgba(255,255,255,0.1) inset;
+}
+
+.icon-button.muted {
+  background: linear-gradient(145deg, #757575, #616161);
+  box-shadow: 
+    0 4px 15px rgba(117,117,117,0.6),
+    0 -2px 5px rgba(255,255,255,0.1) inset;
+}
+
 .icon-button::after {
   content: '';
   position: absolute;
@@ -215,6 +281,10 @@ body {
     min-height: 50px;
   }
   
+  .game-title {
+    font-size: 16px;
+  }
+  
   .score-item {
     font-size: 16px;
   }
@@ -224,8 +294,8 @@ body {
   }
   
   .controls-container {
-    height: 70px;
-    min-height: 70px;
+    height: 90px;
+    min-height: 90px;
   }
   
   .icon-button {
@@ -241,6 +311,15 @@ body {
   .pause-text {
     font-size: 16px;
   }
+  
+  .qr-container {
+    margin: 10px 0;
+    padding: 10px;
+  }
+  
+  #qrcode {
+    transform: scale(0.9);
+  }
 }
 
 @media (max-height: 600px) {
@@ -250,14 +329,35 @@ body {
   }
   
   .controls-container {
-    height: 65px;
-    min-height: 65px;
+    height: 80px;
+    min-height: 80px;
   }
   
   .icon-button {
     width: 55px;
     height: 55px;
     font-size: 24px;
+  }
+  
+  .qr-container {
+    margin: 5px 0;
+  }
+  
+  #qrcode {
+    transform: scale(0.8);
+  }
+}
+
+@media (max-height: 500px) {
+  .controls-container {
+    height: 70px;
+    min-height: 70px;
+  }
+  
+  .icon-button {
+    width: 50px;
+    height: 50px;
+    font-size: 22px;
   }
 }
 
@@ -271,6 +371,9 @@ body {
 <body>
 
 <div class="game-header">
+  <div class="header-left">
+    <div class="game-title">🕹️ TETRIS MOBILE</div>
+  </div>
   <div class="score-display">
     <div class="score-item">
       <div class="score-label">ĐIỂM</div>
@@ -290,7 +393,13 @@ body {
   <div class="pause-overlay" id="pauseOverlay">
     <div class="pause-title">⏸️ TẠM DỪNG</div>
     <div class="pause-text">Nhấn nút ▶️ để tiếp tục</div>
-    <div class="pause-text">Hoặc nhấn phím P</div>
+    
+    <!-- QR Code Section -->
+    <div class="qr-container">
+      <div class="qr-title">🔗 Chia sẻ game này:</div>
+      <div id="qrcode"></div>
+      <div class="qr-link">tin86pc.github.io/XepHinh/</div>
+    </div>
   </div>
 </div>
 
@@ -305,6 +414,9 @@ body {
     <button class="icon-button fullscreen" onclick="toggleFullscreen()" title="Toàn màn hình">
       ⛶
     </button>
+    <button class="icon-button sound" id="soundBtn" onclick="toggleSound()" title="Bật/Tắt âm thanh">
+      🔊
+    </button>
   </div>
 </div>
 
@@ -313,6 +425,7 @@ body {
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 const tapHint = document.getElementById("tapHint");
+const pauseOverlay = document.getElementById("pauseOverlay");
 
 const COLS = 10;
 const ROWS = 20;
@@ -399,7 +512,7 @@ const WALL_KICKS = {
   }
 };
 
-// Thêm extra kicks cho các khối khi sát tường - ĐÃ THÊM
+// Thêm extra kicks cho các khối khi sát tường
 const EXTRA_KICKS = [
   [0, 0],   // Gốc
   [1, 0], [-1, 0], [0, 1], [0, -1],  // Xung quanh gần
@@ -418,6 +531,11 @@ let gameRunning = false;
 let dropTimer = null;
 let gamePaused = false;
 
+// Sound variables
+let soundEnabled = true;
+let lastMoveTime = 0;
+const MOVE_SOUND_DELAY = 100; // ms
+
 // Touch control variables
 let touchStartX = 0;
 let touchStartY = 0;
@@ -425,11 +543,152 @@ let touchStartTime = 0;
 let isDragging = false;
 let dragStartPieceX = 0;
 
+// QR Code variables
+let qrCode = null;
+const GAME_URL = "https://tin86pc.github.io/XepHinh/";
+
 // Sensitivity settings
 const SWIPE_THRESHOLD = 40;
 const TAP_THRESHOLD = 200;
 const TAP_MOVE_THRESHOLD = 15;
 const DRAG_THRESHOLD = 10;
+
+// ===================== SOUND FUNCTIONS =====================
+function initAudio() {
+  // Tạo âm thanh đơn giản bằng Web Audio API
+  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  
+  // Hàm tạo âm thanh đơn giản
+  function createBeep(duration, frequency, type) {
+    if (!soundEnabled) return;
+    
+    try {
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.value = frequency;
+      oscillator.type = type;
+      
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + duration);
+    } catch (e) {
+      console.log("Không thể phát âm thanh:", e);
+    }
+  }
+  
+  // Gán các hàm tạo âm thanh
+  window.playMoveSound = () => {
+    const now = Date.now();
+    if (now - lastMoveTime > MOVE_SOUND_DELAY) {
+      createBeep(0.05, 200, 'sine');
+      lastMoveTime = now;
+    }
+  };
+  
+  window.playRotateSound = () => {
+    if (soundEnabled) createBeep(0.1, 300, 'sine');
+  };
+  
+  window.playDropSound = () => {
+    if (soundEnabled) createBeep(0.15, 150, 'sine');
+  };
+  
+  window.playLineSound = () => {
+    if (soundEnabled) createBeep(0.2, 600, 'square');
+  };
+  
+  window.playGameOverSound = () => {
+    if (soundEnabled) {
+      createBeep(0.3, 200, 'sawtooth');
+      setTimeout(() => createBeep(0.3, 150, 'sawtooth'), 300);
+      setTimeout(() => createBeep(0.5, 100, 'sawtooth'), 600);
+    }
+  };
+}
+
+function toggleSound() {
+  soundEnabled = !soundEnabled;
+  const soundBtn = document.getElementById('soundBtn');
+  
+  if (soundEnabled) {
+    soundBtn.innerHTML = '🔊';
+    soundBtn.classList.remove('muted');
+    soundBtn.classList.add('sound');
+    // Play a test sound when turning on
+    setTimeout(() => {
+      if (soundEnabled) {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.value = 400;
+        oscillator.type = 'sine';
+        
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.1);
+      }
+    }, 100);
+  } else {
+    soundBtn.innerHTML = '🔇';
+    soundBtn.classList.remove('sound');
+    soundBtn.classList.add('muted');
+  }
+}
+
+// ===================== FULLSCREEN FUNCTIONS =====================
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(err => {
+      console.log(`Lỗi khi vào chế độ toàn màn hình: ${err.message}`);
+    });
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    }
+  }
+}
+
+// ===================== QR CODE FUNCTIONS =====================
+function generateQRCode(elementId = 'qrcode') {
+  // Xóa QR code cũ nếu có
+  const qrcodeDiv = document.getElementById(elementId);
+  if (!qrcodeDiv) return;
+  
+  qrcodeDiv.innerHTML = '';
+  
+  // Tạo QR code mới
+  try {
+    new QRCode(qrcodeDiv, {
+      text: GAME_URL,
+      width: 150,
+      height: 150,
+      colorDark: "#000000",
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.H
+    });
+  } catch (e) {
+    console.log("Lỗi tạo QR code:", e);
+  }
+}
+
+function updatePauseOverlay() {
+  if (gamePaused) {
+    // Generate QR code when pausing
+    setTimeout(() => generateQRCode('qrcode'), 50);
+  }
+}
 
 // ===================== GAME FUNCTIONS =====================
 function createBoard() {
@@ -492,7 +751,6 @@ function merge() {
   });
 }
 
-// ========== XOAY MỚI - ĐÃ SỬA CHO TẤT CẢ KHỐI ==========
 function rotatePiece() {
   // Khối O không xoay
   if (currentPiece.type === 2) {
@@ -526,14 +784,18 @@ function rotatePiece() {
       currentPiece.rotation = newRotation;
       currentPiece.x = testX;
       currentPiece.y = testY;
+      
+      // Phát âm thanh xoay
+      if (gameRunning && !gamePaused) {
+        playRotateSound();
+      }
+      
       return true;
     }
   }
   
   // Nếu không có wall kick nào hoạt động, thử các extra kicks
-  // Áp dụng cho tất cả các khối (3: T, 4: J, 5: L, 6: S, 7: Z)
   if (currentPiece.type >= 3 && currentPiece.type <= 7) {
-    // Ưu tiên các kick ngang vì khối thường bị kẹt ở tường
     const priorityKicks = [
       [0, 0],    // Gốc
       [1, 0], [-1, 0], // Trái phải
@@ -554,6 +816,12 @@ function rotatePiece() {
         currentPiece.rotation = newRotation;
         currentPiece.x = testX;
         currentPiece.y = testY;
+        
+        // Phát âm thanh xoay
+        if (gameRunning && !gamePaused) {
+          playRotateSound();
+        }
+        
         return true;
       }
     }
@@ -569,6 +837,12 @@ function rotatePiece() {
         currentPiece.rotation = newRotation;
         currentPiece.x = testX;
         currentPiece.y = testY;
+        
+        // Phát âm thanh xoay
+        if (gameRunning && !gamePaused) {
+          playRotateSound();
+        }
+        
         return true;
       }
     }
@@ -579,6 +853,11 @@ function rotatePiece() {
   currentPiece.x = originalX;
   currentPiece.y = originalY;
   currentPiece.rotation = originalRotation;
+  
+  // Vẫn phát âm thanh dù không xoay được
+  if (gameRunning && !gamePaused) {
+    playMoveSound();
+  }
   
   return false;
 }
@@ -613,7 +892,14 @@ function clearLines() {
     
     document.getElementById("score").textContent = score;
     document.getElementById("level").textContent = level;
+    
+    // Phát âm thanh xóa dòng
+    if (gameRunning && !gamePaused) {
+      playLineSound();
+    }
   }
+  
+  return linesCleared;
 }
 
 function drawBlock(x, y, color) {
@@ -671,7 +957,7 @@ function draw() {
         if (currentPiece.shape[y][x]) {
           const drawX = currentPiece.x + x;
           const drawY = currentPiece.y + y;
-          if (drawY >= -1) { // Chỉ vẽ nếu block nằm trong khu vực nhìn thấy (cho phép -1 cho khối I)
+          if (drawY >= -1) {
             drawBlock(drawX, drawY, COLORS[currentPiece.type]);
           }
         }
@@ -686,21 +972,42 @@ function drop() {
   if (!collide(currentPiece.x, currentPiece.y + 1, currentPiece.shape)) {
     currentPiece.y++;
   } else {
+    // Phát âm thanh đặt khối
+    if (soundEnabled) {
+      playDropSound();
+    }
+    
     merge();
-    clearLines();
+    const linesCleared = clearLines();
     currentPiece = createPiece();
     
     if (collide(currentPiece.x, currentPiece.y, currentPiece.shape)) {
       gameRunning = false;
-      document.getElementById('pauseOverlay').innerHTML = `
+      
+      // Phát âm thanh game over
+      if (soundEnabled) {
+        playGameOverSound();
+      }
+      
+      pauseOverlay.innerHTML = `
         <div class="pause-title">🎮 GAME OVER</div>
         <div class="pause-text">Điểm: ${score}</div>
         <div class="pause-text">Level: ${level}</div>
         <div class="pause-text">Nhấn 🔄 để chơi lại</div>
+        
+        <!-- QR Code Section -->
+        <div class="qr-container">
+          <div class="qr-title">🔗 Chia sẻ game này:</div>
+          <div id="qrcode"></div>
+          <div class="qr-link">${GAME_URL}</div>
+        </div>
       `;
-      document.getElementById('pauseOverlay').classList.add('show');
+      pauseOverlay.classList.add('show');
       document.getElementById('pauseBtn').innerHTML = '⏸️';
       clearInterval(dropTimer);
+      
+      // Generate QR code for game over screen
+      setTimeout(() => generateQRCode('qrcode'), 50);
     }
   }
   draw();
@@ -715,7 +1022,7 @@ function startGame() {
   
   document.getElementById("score").textContent = "0";
   document.getElementById("level").textContent = "1";
-  document.getElementById('pauseOverlay').classList.remove('show');
+  pauseOverlay.classList.remove('show');
   
   gameRunning = true;
   gamePaused = false;
@@ -746,26 +1053,15 @@ function togglePause() {
   
   gamePaused = !gamePaused;
   if (gamePaused) {
-    document.getElementById('pauseOverlay').classList.add('show');
+    updatePauseOverlay();
+    pauseOverlay.classList.add('show');
     document.getElementById('pauseBtn').innerHTML = '▶️';
     clearInterval(dropTimer);
   } else {
-    document.getElementById('pauseOverlay').classList.remove('show');
+    pauseOverlay.classList.remove('show');
     document.getElementById('pauseBtn').innerHTML = '⏸️';
     dropTimer = setInterval(drop, dropInterval);
     draw();
-  }
-}
-
-function toggleFullscreen() {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen().catch(err => {
-      console.log(`Lỗi khi vào chế độ toàn màn hình: ${err.message}`);
-    });
-  } else {
-    if (document.exitFullscreen) {
-      document.exitFullscreen();
-    }
   }
 }
 
@@ -818,9 +1114,26 @@ document.addEventListener('fullscreenchange', () => {
   setTimeout(resizeCanvas, 100);
 });
 
-// Start game and resize
-startGame();
-setTimeout(resizeCanvas, 100);
+// ===================== INITIALIZATION =====================
+function initGame() {
+  // Khởi tạo âm thanh
+  initAudio();
+  
+  // Khởi tạo game
+  startGame();
+  setTimeout(resizeCanvas, 100);
+  
+  console.log("Tetris Mobile - Game xếp hình cho điện thoại");
+  console.log("Đã tối ưu cho điện thoại di động");
+  console.log("Đã thêm âm thanh, toàn màn hình và QR code");
+}
+
+// Chạy khi trang đã tải xong
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initGame);
+} else {
+  initGame();
+}
 
 // ===================== KEYBOARD CONTROLS =====================
 document.addEventListener("keydown", e => {
@@ -833,6 +1146,7 @@ document.addEventListener("keydown", e => {
       if (!collide(currentPiece.x - 1, currentPiece.y, currentPiece.shape)) {
         currentPiece.x--;
         draw();
+        playMoveSound();
       }
       break;
       
@@ -840,6 +1154,7 @@ document.addEventListener("keydown", e => {
       if (!collide(currentPiece.x + 1, currentPiece.y, currentPiece.shape)) {
         currentPiece.x++;
         draw();
+        playMoveSound();
       }
       break;
       
@@ -847,6 +1162,7 @@ document.addEventListener("keydown", e => {
       if (!collide(currentPiece.x, currentPiece.y + 1, currentPiece.shape)) {
         currentPiece.y++;
         draw();
+        playMoveSound();
       }
       break;
       
@@ -866,6 +1182,11 @@ document.addEventListener("keydown", e => {
     case "p":
     case "P":
       togglePause();
+      break;
+      
+    case "m":
+    case "M":
+      toggleSound();
       break;
       
     case "f":
@@ -917,6 +1238,7 @@ canvas.addEventListener("touchmove", e => {
       for (let i = currentPiece.x + 1; i <= targetX; i++) {
         if (!collide(i, currentPiece.y, currentPiece.shape)) {
           currentPiece.x = i;
+          playMoveSound();
         } else {
           break;
         }
@@ -925,6 +1247,7 @@ canvas.addEventListener("touchmove", e => {
       for (let i = currentPiece.x - 1; i >= targetX; i--) {
         if (!collide(i, currentPiece.y, currentPiece.shape)) {
           currentPiece.x = i;
+          playMoveSound();
         } else {
           break;
         }
@@ -979,65 +1302,6 @@ canvas.addEventListener("touchend", e => {
   }
 });
 
-// ===================== MOUSE CONTROLS =====================
-let mouseIsDown = false;
-let mouseStartX = 0;
-let mouseStartPieceX = 0;
-
-canvas.addEventListener('mousedown', e => {
-  if (!gameRunning || gamePaused) return;
-  mouseIsDown = true;
-  mouseStartX = e.clientX;
-  mouseStartPieceX = currentPiece.x;
-  e.preventDefault();
-});
-
-canvas.addEventListener('mousemove', e => {
-  if (!gameRunning || !mouseIsDown || gamePaused) return;
-  
-  const pixelDiff = e.clientX - mouseStartX;
-  const blockSize = canvas.width / COLS;
-  const blockDiff = Math.round(pixelDiff / (blockSize * 0.8));
-  const targetX = mouseStartPieceX + blockDiff;
-  
-  if (targetX > currentPiece.x) {
-    for (let i = currentPiece.x + 1; i <= targetX; i++) {
-      if (!collide(i, currentPiece.y, currentPiece.shape)) {
-        currentPiece.x = i;
-      } else {
-        break;
-      }
-    }
-  } else if (targetX < currentPiece.x) {
-    for (let i = currentPiece.x - 1; i >= targetX; i--) {
-      if (!collide(i, currentPiece.y, currentPiece.shape)) {
-        currentPiece.x = i;
-      } else {
-        break;
-      }
-    }
-  }
-  
-  draw();
-  e.preventDefault();
-});
-
-canvas.addEventListener('mouseup', e => {
-  mouseIsDown = false;
-  e.preventDefault();
-});
-
-canvas.addEventListener('mouseleave', e => {
-  mouseIsDown = false;
-});
-
-canvas.addEventListener('click', (e) => {
-  if (gameRunning && !gamePaused && !mouseIsDown) {
-    rotatePiece();
-    draw();
-  }
-});
-
 // ===================== PREVENT UNWANTED BEHAVIOR =====================
 document.addEventListener('touchmove', function(e) {
   if (e.target === canvas || e.target.closest('.main-game-area')) {
@@ -1046,12 +1310,6 @@ document.addEventListener('touchmove', function(e) {
 }, { passive: false });
 
 canvas.addEventListener('contextmenu', e => e.preventDefault());
-
-// Hiển thị thông báo khi tải trang
-console.log("Tetris Mobile - Xoay mượt đã fix");
-console.log("Đã sửa: Xoay mượt cho tất cả khối sát tường");
-console.log("Đã thêm: Extra kicks cho T, J, L, S, Z");
-console.log("Đã ưu tiên: Các kick ngang khi sát tường");
 </script>
 
 </body>
