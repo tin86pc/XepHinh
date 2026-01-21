@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>🕹️ Tetris Mobile - Game Xếp Hình</title>
+<title>🕹️ Xếp Hình</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🕹️</text></svg>">
 
 <!-- Thêm thư viện QR Code -->
@@ -38,23 +38,10 @@ body {
   height: 60px;
   min-height: 60px;
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   background: linear-gradient(180deg, #0a001a 0%, #090014 100%);
   padding: 0 15px;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.game-title {
-  font-size: 18px;
-  font-weight: bold;
-  color: #ff5722;
-  text-shadow: 0 0 10px rgba(255,87,34,0.7);
 }
 
 .score-display {
@@ -86,6 +73,11 @@ body {
 #level {
   color: #4fc3f7;
   text-shadow: 0 0 10px rgba(79,195,247,0.5);
+}
+
+#speed {
+  color: #ff9800;
+  text-shadow: 0 0 10px rgba(255,152,0,0.5);
 }
 
 /* Game area */
@@ -281,10 +273,6 @@ body {
     min-height: 50px;
   }
   
-  .game-title {
-    font-size: 16px;
-  }
-  
   .score-item {
     font-size: 16px;
   }
@@ -371,9 +359,6 @@ body {
 <body>
 
 <div class="game-header">
-  <div class="header-left">
-    <div class="game-title">🕹️ TETRIS MOBILE</div>
-  </div>
   <div class="score-display">
     <div class="score-item">
       <div class="score-label">ĐIỂM</div>
@@ -382,6 +367,10 @@ body {
     <div class="score-item">
       <div class="score-label">LEVEL</div>
       <div class="score-value" id="level">1</div>
+    </div>
+    <div class="score-item">
+      <div class="score-label">TỐC ĐỘ</div>
+      <div class="score-value" id="speed">1x</div>
     </div>
   </div>
 </div>
@@ -405,9 +394,6 @@ body {
 
 <div class="controls-container">
   <div class="control-row">
-    <button class="icon-button" onclick="resetGame()" title="Chơi lại">
-      🔄
-    </button>
     <button class="icon-button pause" id="pauseBtn" onclick="togglePause()" title="Dừng/Tiếp tục">
       ⏸️
     </button>
@@ -526,10 +512,12 @@ let board = [];
 let currentPiece;
 let score = 0;
 let level = 1;
-let dropInterval = 800;
+let baseDropInterval = 1000; // Tốc độ gốc: 1 giây
+let currentDropInterval = 1000;
 let gameRunning = false;
 let dropTimer = null;
 let gamePaused = false;
+let totalLinesCleared = 0;
 
 // Sound variables
 let soundEnabled = true;
@@ -552,6 +540,42 @@ const SWIPE_THRESHOLD = 40;
 const TAP_THRESHOLD = 200;
 const TAP_MOVE_THRESHOLD = 15;
 const DRAG_THRESHOLD = 10;
+
+// ===================== TỐC ĐỘ THEO LEVEL (LOGARITHMIC) =====================
+function calculateDropInterval(level) {
+  // Công thức logarithm: tốc độ tăng nhanh ở level thấp, chậm dần ở level cao
+  // Giảm dần theo hàm mũ: interval = base * (0.85^(level-1))
+  
+  // Level 1: 1000ms (1 giây)
+  // Level 2: 850ms (giảm 15%)
+  // Level 3: 722ms (giảm 15%)
+  // Level 4: 614ms (giảm 15%)
+  // Level 5: 522ms (giảm 15%)
+  // Level 10: ~200ms (tổng giảm 80%)
+  // Level 15: ~100ms (tổng giảm 90%)
+  // Level 20+: ~50ms (giới hạn tối thiểu)
+  
+  const baseInterval = 1000; // ms cho level 1
+  const reductionFactor = 0.85; // Mỗi level giảm 15%
+  const minInterval = 50; // Tốc độ tối đa: 50ms (20 khối/giây)
+  
+  // Tính tốc độ mới
+  let newInterval = baseInterval * Math.pow(reductionFactor, level - 1);
+  
+  // Đảm bảo không vượt quá tốc độ tối đa
+  newInterval = Math.max(minInterval, newInterval);
+  
+  // Làm tròn đến 10ms gần nhất
+  newInterval = Math.round(newInterval / 10) * 10;
+  
+  return newInterval;
+}
+
+function updateSpeedDisplay() {
+  // Tính tốc độ hiển thị (1x = 1000ms, 2x = 500ms, v.v.)
+  const speedMultiplier = Math.round((1000 / currentDropInterval) * 10) / 10;
+  document.getElementById("speed").textContent = speedMultiplier.toFixed(1) + "x";
+}
 
 // ===================== SOUND FUNCTIONS =====================
 function initAudio() {
@@ -601,6 +625,14 @@ function initAudio() {
   
   window.playLineSound = () => {
     if (soundEnabled) createBeep(0.2, 600, 'square');
+  };
+  
+  window.playLevelUpSound = () => {
+    if (soundEnabled) {
+      createBeep(0.1, 600, 'sine');
+      setTimeout(() => createBeep(0.1, 800, 'sine'), 100);
+      setTimeout(() => createBeep(0.2, 1000, 'sine'), 200);
+    }
   };
   
   window.playGameOverSound = () => {
@@ -874,19 +906,38 @@ function clearLines() {
   }
   
   if (linesCleared > 0) {
+    totalLinesCleared += linesCleared;
+    
     // Score calculation: 40, 100, 300, 1200 points for 1-4 lines
     const linePoints = [0, 40, 100, 300, 1200];
     score += linePoints[linesCleared] * level;
     
-    // Level up every 1000 points
-    const newLevel = Math.floor(score / 1000) + 1;
+    // Level up mỗi 5 dòng đã xóa (thay vì mỗi 1000 điểm)
+    const newLevel = Math.floor(totalLinesCleared / 5) + 1;
+    
     if (newLevel > level) {
       level = newLevel;
-      // Speed increases with level
-      dropInterval = Math.max(100, 800 - (level - 1) * 50);
-      if (dropTimer) {
-        clearInterval(dropTimer);
-        dropTimer = setInterval(drop, dropInterval);
+      
+      // Cập nhật tốc độ mới theo level
+      const newDropInterval = calculateDropInterval(level);
+      
+      // Chỉ cập nhật nếu tốc độ thay đổi đáng kể (> 10ms)
+      if (Math.abs(newDropInterval - currentDropInterval) > 10) {
+        currentDropInterval = newDropInterval;
+        
+        // Cập nhật interval nếu game đang chạy
+        if (dropTimer) {
+          clearInterval(dropTimer);
+          dropTimer = setInterval(drop, currentDropInterval);
+        }
+        
+        // Phát âm thanh level up
+        if (gameRunning && !gamePaused) {
+          playLevelUpSound();
+        }
+        
+        // Cập nhật hiển thị tốc độ
+        updateSpeedDisplay();
       }
     }
     
@@ -993,7 +1044,9 @@ function drop() {
         <div class="pause-title">🎮 GAME OVER</div>
         <div class="pause-text">Điểm: ${score}</div>
         <div class="pause-text">Level: ${level}</div>
-        <div class="pause-text">Nhấn 🔄 để chơi lại</div>
+        <div class="pause-text">Tốc độ: ${(1000/currentDropInterval).toFixed(1)}x</div>
+        <div class="pause-text">Dòng đã xóa: ${totalLinesCleared}</div>
+        <div class="pause-text">Chạm màn hình để chơi lại</div>
         
         <!-- QR Code Section -->
         <div class="qr-container">
@@ -1018,10 +1071,13 @@ function startGame() {
   currentPiece = createPiece();
   score = 0;
   level = 1;
-  dropInterval = 800;
+  totalLinesCleared = 0;
+  baseDropInterval = 1000;
+  currentDropInterval = calculateDropInterval(level);
   
   document.getElementById("score").textContent = "0";
   document.getElementById("level").textContent = "1";
+  updateSpeedDisplay();
   pauseOverlay.classList.remove('show');
   
   gameRunning = true;
@@ -1031,7 +1087,7 @@ function startGame() {
   draw();
   
   if (dropTimer) clearInterval(dropTimer);
-  dropTimer = setInterval(drop, dropInterval);
+  dropTimer = setInterval(drop, currentDropInterval);
   
   // Ẩn hint sau 3 giây
   setTimeout(() => {
@@ -1042,6 +1098,7 @@ function startGame() {
   }, 3000);
 }
 
+// Hàm reset game khi chạm vào màn hình game over
 function resetGame() {
   if (dropTimer) clearInterval(dropTimer);
   gameRunning = false;
@@ -1060,7 +1117,7 @@ function togglePause() {
   } else {
     pauseOverlay.classList.remove('show');
     document.getElementById('pauseBtn').innerHTML = '⏸️';
-    dropTimer = setInterval(drop, dropInterval);
+    dropTimer = setInterval(drop, currentDropInterval);
     draw();
   }
 }
@@ -1123,9 +1180,9 @@ function initGame() {
   startGame();
   setTimeout(resizeCanvas, 100);
   
-  console.log("Tetris Mobile - Game xếp hình cho điện thoại");
-  console.log("Đã tối ưu cho điện thoại di động");
-  console.log("Đã thêm âm thanh, toàn màn hình và QR code");
+  console.log("Xếp Hình - Game xếp hình cho điện thoại");
+  console.log("Tốc độ tăng theo level: nhanh ở level thấp, chậm ở level cao");
+  console.log("Level 1: 1000ms, Level 10: ~200ms, Level 20+: ~50ms");
 }
 
 // Chạy khi trang đã tải xong
@@ -1193,25 +1250,29 @@ document.addEventListener("keydown", e => {
     case "F":
       toggleFullscreen();
       break;
-      
-    case "r":
-    case "R":
-      resetGame();
-      break;
   }
 });
 
 // ===================== TOUCH CONTROLS =====================
 canvas.addEventListener("touchstart", e => {
   if (gamePaused) return;
-  e.preventDefault();
   
-  const touch = e.touches[0];
-  touchStartX = touch.clientX;
-  touchStartY = touch.clientY;
-  touchStartTime = Date.now();
-  isDragging = false;
-  dragStartPieceX = currentPiece.x;
+  // Nếu game đang chạy, xử lý di chuyển
+  if (gameRunning) {
+    e.preventDefault();
+    
+    const touch = e.touches[0];
+    touchStartX = touch.clientX;
+    touchStartY = touch.clientY;
+    touchStartTime = Date.now();
+    isDragging = false;
+    dragStartPieceX = currentPiece.x;
+  }
+  // Nếu game over, reset game khi chạm vào màn hình
+  else if (!gameRunning && pauseOverlay.classList.contains('show')) {
+    resetGame();
+    pauseOverlay.classList.remove('show');
+  }
 });
 
 canvas.addEventListener("touchmove", e => {
@@ -1259,13 +1320,8 @@ canvas.addEventListener("touchmove", e => {
 });
 
 canvas.addEventListener("touchend", e => {
-  if (gamePaused) return;
+  if (gamePaused || !gameRunning) return;
   e.preventDefault();
-  
-  if (!gameRunning) {
-    resetGame();
-    return;
-  }
   
   const touch = e.changedTouches[0];
   const deltaX = touch.clientX - touchStartX;
